@@ -674,38 +674,21 @@ function gfx_tri_bary( a, b, c, tex )
 end
 
 cube = {}
-
-
+sys_time = { t=0, dt=1/60 }
 
 function _init()
 	cube = obj_make_cube()
 
-	color(0)
-	rectfill(0,0,127,127)
-	print "init happened"
-	a = v3(1,2,3)
-	c = v3_mul(a,a)
-	print(v3_tostring(c))
-
-	d = v3_neg(a)
-	print(v3_tostring(d))
-
-	d2 = v2(3,4)
-	print(v2_tostring(d2))
-
-	start = v2(5, 10)
-	en = v2(24, 18)
-	gfx_line(start, en)
-
-	start = v2_add_s(start, 5)
-
-	gfx_line(start, en)
-
 end
 
-fr = 0
+function update(dt)
+ sys_time.dt = dt
+ sys_time.t += dt
+end
+
+
 function _update60()
-	fr += 1
+ update(1/60)
 end
 
 function dither_ramp()
@@ -1062,8 +1045,8 @@ if 0 == 0 then
 
 
 
-	y_rot = fr * 0.01
-	x_rot = fr * 0.00234
+	y_rot = sys_time.t * 1
+	x_rot = sys_time.t * 0.234
 
 	obj_r1 = m3_rot_y(y_rot)
 	obj_r2 = m3_rot_x(x_rot)
