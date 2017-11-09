@@ -380,7 +380,7 @@ function gfx_tri_wire( a, b, c )
 	line(c.x, c.y, a.x, a.y)
 end
 
-function hline( xl, xr, y, cc )
+function hline( xl, xr, y, col )
 	--if y < vs.sc.tl.y or y >= vs.sc.br.y then return end
 
 	if xr < xl then xl,xr = xr,xl end
@@ -437,43 +437,35 @@ function gfx_tri_fill( a, b, c, cc )
 	-- sort vertices
  a,b,c = sort_y_3( a, b, c )
 
+ -- ceil and clip y
  ayc = mid( ceil(a.y), vs.sct, vs.scb )
  byc = mid( ceil(b.y), vs.sct, vs.scb )
  cyc = mid( ceil(c.y), vs.sct, vs.scb )
 
-	if ayc % 2 == 0 then 
-		cc1 = band(cc, 0xff)
-		cc2 = band(cc, 0xff00) / 256
-	else
-		cc1 = band(cc, 0xff00) / 256
-		cc2 = band(cc, 0xff)
-	end
-
+ -- init edges
 	dab_dy_x = (b.x - a.x) / (b.y - a.y)
 	dac_dy_x = (c.x - a.x) / (c.y - a.y)
  dbc_dy_x = (c.x - b.x) / (c.y - b.y)  
 
- ab = {}
-	ab.x = a.x + (ayc - a.y) * dab_dy_x
- ac = {}
-	ac.x = a.x + (ayc - a.y) * dac_dy_x
- bc = {}
- bc.x = b.x + (byc - b.y) * dbc_dy_x
+	ab_x = a.x + (ayc - a.y) * dab_dy_x
+	ac_x = a.x + (ayc - a.y) * dac_dy_x
+ bc_x = b.x + (byc - b.y) * dbc_dy_x
 
-	for py=ayc,byc-1 do
+ byc-=1
 
-		hline( ab.x, ac.x, py, cc1 )
-		ab.x += dab_dy_x
-		ac.x += dac_dy_x
-
-		cc1,cc2 = cc2,cc1
+	for py=ayc,byc do
+		line( ab_x, py, ac_x, py, col )
+		ab_x += dab_dy_x
+		ac_x += dac_dy_x
 	end
 
-	for py=byc,cyc-1 do
-		hline( bc.x, ac.x, py, cc1 )
-		bc.x += dbc_dy_x
-		ac.x += dac_dy_x
-		cc1,cc2 = cc2,cc1
+ byc+=1
+ cyc-=1
+
+	for py=byc,cyc do
+  line( bc_x, py, ac_x, py, col )
+		bc_x += dbc_dy_x
+		ac_x += dac_dy_x
 	end
 end
 
@@ -673,6 +665,47 @@ function gfx_tri_bary( a, b, c, tex )
 	end
 end
 
+-- fillp dither patterns
+
+dither_patterns = {
+0b0000000000000000,
+0b0000000000100000,
+0b1000000000100000,
+0b1001000000100000,
+0b1001000000100100,
+0b1001010000100100,
+0b1011010000100100,
+0b1001010010100100,
+0b1011010010100100,
+0b1011010011100100,
+0b1011011011100100,
+0b1011011011101100,
+0b1011011011111100,
+0b1011011011111101,
+0b1111011011111101,
+0b1111011111111101,
+0b1111011111111111
+}
+
+function gfx_dither( grad, s )
+   gc = #grad
+   g = s * (gc-1)
+   g_i = flr(g)   
+   g_f = g - g_i
+
+   g_i1 = mid( g_i + 1, 1, gc )
+   g_i2 = mid( g_i + 2, 1, gc )
+
+   c1 = grad[g_i1]
+   c2 = grad[g_i2]
+
+   --pat = grad[flr(s * #grad) + 1]
+   dc = #dither_patterns
+   d = dither_patterns[ mid( 1 + flr( g_f * (dc-1) ), 1, dc ) ]
+   return c1, c2, d
+end
+
+
 cube = {}
 sys_time = { t=0, dt=1/60 }
 
@@ -724,12 +757,15 @@ function dither( a )
 	return result
 end
 
-shades = { 
- dither( {0x0, 0x2, 0x4, 0x9, 0xa, 0x7} ),  --yellow
- dither( {0x0, 0x1, 0x3, 0xb, 0x7} ), -- green
- dither( {0x0, 0x1, 0xc, 0x7} ), -- blue
- dither( {0x0, 0x2, 0x8, 0xe, 0x7} )  -- red
+
+gradients = { 
+ {0x0, 0x2, 0x4, 0x9, 0xa, 0x7},  --yellow
+ {0x0, 0x1, 0x3, 0xb, 0x7}, -- green
+ {0x0, 0x1, 0xc, 0x7}, -- blue
+ {0x0, 0x2, 0x8, 0xe, 0x7}  -- red
 }
+
+
 
 function perf_draw()
  clip()
@@ -886,17 +922,15 @@ function obj_draw( obj )
 
  		s = sat( ldotn * -0.5 + 0.5)
 
- 		-- s = sqrt( s )
- 		--s = s * s
- 		shade = shades[t.c]
- 		pat = shade[flr(s * #shade) + 1]
+   c1,c2,d = gfx_dither( gradients[t.c], s )   
+   col = c1 + c2 * 16
 
   		--add( drawlist.tri, { a=a, b=b, c=c, p=pat } )
     if t.t != nil then
       gfx_tri_tex( a, b, c, t.t )
      else
-      gfx_tri_fill( a, b, c, pat )
-      
+      fillp( d )
+      gfx_tri_fill( a, b, c, col )      
      end
 
   		
