@@ -140,6 +140,22 @@ function v3_rot_y(a, t)
 	return v3( a.x * c + a.z * s, a.y, a.x * -s + a.z * c )	
 end
 
+-- plane
+function pl(n,d)
+ return { x=n.x, y=n.y, z=n.z, d=d }
+end
+
+function pl_abc(a,b,c)
+ local ba = v3_sub(a,b)
+ local bc = v3_sub(c,b)
+ local n = v3_normalize( v3_cross(ba, bc) )
+ return pl( n, -v3_dot(n, a) )
+end
+
+function pl_dist(p, v)
+ return v3_dot(p,v) + p.d
+end
+
 -- matrix
 
 function m3(x,y,z)
@@ -170,7 +186,7 @@ function m3_rot_z(t)
 end
 
 function m3_mul(m1, m2)
-	r = {}
+	local r = {}
 	for i=1,3 do
 		r[i] = {}
 		for j=1,3 do
@@ -185,7 +201,7 @@ function m3_mul(m1, m2)
 end
 
 function m3_trans(m)
-	r = {}
+	local r = {}
 	for i=1,3 do
 		r[i] = {}
 		for j=1,3 do
@@ -208,20 +224,110 @@ function rt_apply(v, rt)
 end
 
 function rt_mul(rta, rtb)
- rt = {}
+ local rt = {}
  rt.r = m3_mul(rta.r, rtb.r)
  rt.t = v3_add(rtb.t, v3_mul_m3(rta.t, rtb.r))
  return rt
 end
 
 function rt_inv(rt)
-	r = m3_trans(rt.r)
+	local r = m3_trans(rt.r)
 	return { r = r, t = v3_mul_m3( v3_neg(rt.t), r ) }
 end	
 
+-- sort
+-- casualeffects heap sort:
+-- https://github.com/morgan3d/misc/blob/master/p8sort/sort.p8
+
+function ce_heap_sort(data)
+ local n = #data
+
+ if (n==0) return
+
+ -- form a max heap
+ for i = flr(n / 2) + 1, 1, -1 do
+  -- m is the index of the max child
+  local parent, value, m = i, data[i], i + i
+  local key = value.key 
+  
+  while m <= n do
+   -- find the max child
+   if ((m < n) and (data[m + 1].key > data[m].key)) m += 1
+   local mval = data[m]
+   if (key > mval.key) break
+   data[parent] = mval
+   parent = m
+   m += m
+  end
+  data[parent] = value
+ end 
+
+ -- read out the values,
+ -- restoring the heap property
+ -- after each step
+ for i = n, 2, -1 do
+  -- swap root with last
+  local value = data[i]
+  data[i], data[1] = data[1], value
+
+  -- restore the heap
+  local parent, terminate, m = 1, i - 1, 2
+  local key = value.key 
+  
+  while m <= terminate do
+   local mval = data[m]
+   local mkey = mval.key
+   if (m < terminate) and (data[m + 1].key > mkey) then
+    m += 1
+    mval = data[m]
+    mkey = mval.key
+   end
+   if (key > mkey) break
+   data[parent] = mval
+   parent = m
+   m += m
+  end  
+  
+  data[parent] = value
+ end
+end
+
+
 -- view state
 
+function vs_cull_sphere( o, r )
+ for p in all(vs.frustum.planes) do
+  if (pl_dist(p,o) < -r) then
+   --gfx_3d_sphere_outline( o, r * 2, 8 )
+   return false
+  end
+ end 
+ --gfx_3d_sphere_outline( o, r, 11 )
+ return true
+end
+
 vs = {}
+
+function vs_frustum_setup()
+ vs.frustum = {}
+ vs.frustum.planes = {}
+
+ vcam = vs.cam_to_world.t
+ vptl = v3(vs.vp.tl.x, vs.vp.tl.y, vs.pdist)
+ vptr = v3(vs.vp.br.x, vs.vp.tl.y, vs.pdist)
+ vpbr = v3(vs.vp.br.x, vs.vp.br.y, vs.pdist)
+ vpbl = v3(vs.vp.tl.x, vs.vp.br.y, vs.pdist)
+
+ vptl = rt_apply( vptl, vs.cam_to_world )
+ vptr = rt_apply( vptr, vs.cam_to_world )
+ vpbr = rt_apply( vpbr, vs.cam_to_world )
+ vpbl = rt_apply( vpbl, vs.cam_to_world )
+
+ add( vs.frustum.planes, pl_abc(vcam, vpbl, vptl))
+ add( vs.frustum.planes, pl_abc(vcam, vptl, vptr))
+ add( vs.frustum.planes, pl_abc(vcam, vptr, vpbr))
+ add( vs.frustum.planes, pl_abc(vcam, vpbr, vpbl))
+end
 
 function vs_view_setup( cam_to_world, vp, pdist, win, sc )
  vs.near = 0.1
@@ -258,6 +364,8 @@ vs.st_offset = v2_mul( v2_sub( vs.win.tl, vs.vp.tl ), vs.st_scale )
 
  vs.cam_to_world = cam_to_world
  vs.world_to_cam = rt_inv( cam_to_world )
+
+ vs_frustum_setup()
 end
 
 function vs_set_obj_mat( obj_to_world )
@@ -270,8 +378,7 @@ end
 function vs_view_to_screen( v )
  -- project onto screen at distance vs.pdist in view space
  local w = 1. / v.z
- local pp = v2_mul_s( v, vs.pdist * w )
- local ps = v2_add(v2_mul(pp, vs.st_scale), vs.st_offset)
+ local ps = v2_add(v2_mul(v2_mul_s( v, vs.pdist * w ), vs.st_scale), vs.st_offset)
  return {x=ps.x, y = ps.y, z=v.z, w = w }
 end
 
@@ -282,6 +389,32 @@ end
 -- gfx
 
 drawlist = {}
+
+function dl_reset()
+ drawlist = {}
+end
+
+function dl_draw()
+ sortlist = {}
+
+ for k,v in pairs(drawlist) do
+  add(sortlist, {key=-v.key,dl_key=k})
+ end
+ 
+ ce_heap_sort(sortlist)
+
+ for p in all(sortlist) do
+  item = drawlist[p.dl_key]
+  item.fn( item.value )
+ end
+end
+
+
+function dl_tri(v)
+   fillp(v.fp)
+   gfx_tri_fill( v.a, v.b, v.c, v.col )
+end   
+
 
 function gfx_line( a, b, col )
   line(a.x, a.y, b.x, b.y, col)
@@ -319,32 +452,37 @@ function gfx_3d_line( a, b, col )
 end 
 
 function gfx_3d_grid( col )
- for i=-5, 5, 2 do
+ if (not vs_cull_sphere( v3(0,0,0), sqrt(50) )) then return end
+
+ for i=-5, 5 do
   gfx_3d_line( v3(i, 0, -5), v3(i, 0, 5), col )
   gfx_3d_line( v3(-5, 0, i), v3(5, 0, i), col )
  end
 end
 
 function get_projected_size( r, d )
- f = d * d - r * r
+ local f = d * d - r * r
  if ( f > 0 ) return d * r / sqrt( f ) else return -1 
 end
 
-function gfx_3d_sphere_outline( c, r )
+function gfx_3d_sphere_outline( c, r, col )
+  --if (not vs_cull_sphere( c, r )) then return end
   c = rt_apply( c, vs.world_to_cam )
-  cp = vs_view_to_screen( c )
-  d = v3_length(c)
+  local cp = vs_view_to_screen( c )
+  local d = v3_length(c)
 
-  p = get_projected_size( r, d )
+  local p = get_projected_size( r, d )
    
-  c2 = v3(c.x, c.y, c.z)
+  local c2 = v3(c.x, c.y, c.z)
   c2.x += p 
-  cp2 = vs_view_to_screen( c2 )
+  local cp2 = vs_view_to_screen( c2 )
 
-  if ( p > 0 ) circ( cp.x, cp.y, cp2.x - cp.x )
+  if ( p > 0 ) circ( cp.x, cp.y, cp2.x - cp.x, col )
 end 
 
 function gfx_3d_sprite( c, w, h, sx, sy, sw, sh )
+ --if (not vs_cull_sphere( c, max(w,h) )) then return end
+
   c = rt_apply( c, vs.world_to_cam )
   if (c.z < vs.near ) return
 
@@ -420,7 +558,7 @@ function sort_y_3( a, b, c )
  return a,b,c
 end
 
-function gfx_tri_fill( a, b, c, cc )
+function gfx_tri_fill( a, b, c, col )
 
 	-- sort vertices
  a,b,c = sort_y_3( a, b, c )
@@ -844,156 +982,78 @@ function obj_make_cube()
 	return obj
 end
 
+function transform_vert( ov )
+   local vv = rt_apply( ov, vs.obj_to_cam )
 
+   vv = vs_view_to_screen( vv )
+   vv.u = ov.u * vv.w
+   vv.v = ov.v * vv.w
+   return vv
+end
 
-function obj_draw( obj )
-	wld_vtx = {}
+function obj_draw( obj, obj_to_world )
 
-	scr_vtx = {}
+ bounds_c_world = rt_apply( obj.bounds.c, obj_to_world )
 
-	i = 1
-	for idx=1,8 do
-		ov = obj.vtx[idx]
+ if vs_cull_sphere( bounds_c_world, obj.bounds.r ) then
 
-		--vw = rt_apply( ov, obj_world_rt )
-		--wld_vtx[idx] = v3( vw.x, vw.y, vw.z )
-		--vv = rt_apply( wld_vtx[idx], vs.world_cam_rt )
+  vs_set_obj_mat( obj_to_world )
 
-  vv = rt_apply( ov, vs.obj_to_cam )
+  ldir = v3(0,1,0)
+  obj_ldir = v3_mul_m3( ldir, vs.world_to_obj_rot )
 
-		vp = vs_view_to_screen( vv )
+ 	scr_vtx = {}
 
-		scr_vtx[idx] = v3( vp.x, vp.y, vp.z )
-		scr_vtx[idx].w = vp.w
-		scr_vtx[idx].u = ov.u * vp.w
-		scr_vtx[idx].v = ov.v * vp.w
-	end
+ 	for i,ov in pairs(obj.vtx) do
+   scr_vtx[i] = transform_vert(ov)
+ 	end
 
-	ldir = v3(0,1,0)
+ 	for t in all(obj.tri) do
 
-	obj_ldir = v3_mul_m3( ldir, vs.world_to_obj_rot )
+  a = scr_vtx[t[1]]
+  b = scr_vtx[t[2]]
+  c = scr_vtx[t[3]]
 
-	for t in all(obj.tri) do
+  -- backface cull
+  if v2_cross( v2_sub( b, a ), v2_sub( c, b ) ) < 0.0 then
+   if a.z > vs.near and b.z > vs.near and c.z > vs.near then
 
- -- backface cull
- a = scr_vtx[t[1]]
- b = scr_vtx[t[2]]
- c = scr_vtx[t[3]]
+  		ldotn = v3_dot(obj_ldir, t.n)
 
- if v2_cross( v2_sub( b, a ), v2_sub( c, b ) ) < 0.0 then
- if a.z > vs.near and b.z > vs.near and c.z > vs.near then
- 		col = 0xdfab
- 		--col = flr(rnd())  % 65535
- 		col = i * 12314
- 		i += 1
+  		s = sat( ldotn * -0.5 + 0.5)
 
- 		ldotn = v3_dot(obj_ldir, t.n)
+    c1,c2,fp = gfx_dither( gradients[t.c], s )   
+    local col = c1 + c2 * 16
 
- 		s = sat( ldotn * -0.5 + 0.5)
-
-   c1,c2,fp = gfx_dither( gradients[t.c], s )   
-   col = c1 + c2 * 16
-
-    
-    if t.t != nil then
-      gfx_tri_tex( a, b, c, t.t )
-     else
-     add( drawlist, { t=dl_type.tri, a=a, b=b, c=c, co=col, fp=fp } )
+     local key = mid(a.z, b.z, c.z)
+     add( drawlist, { key=key, fn = dl_tri, value = {a=a, b=b, c=c, col=col, fp=fp } } )
       --fillp( fp )
-      --gfx_tri_fill( a, b, c, col )      
+      --gfx_tri_tex( a, b, c, t.t )
+      --gfx_tri_fill( a, b, c, col )         		
+   		--gfx_tri_bary( scr_vtx[t[1]], scr_vtx[t[2]], scr_vtx[t[3]], t.t )     
+   		--gfx_tri_wire( scr_vtx[t[1]], scr_vtx[t[2]], scr_vtx[t[3]] )
      end
-
-  		
-  		--gfx_tri_bary( scr_vtx[t[1]], scr_vtx[t[2]], scr_vtx[t[3]], t.t )
-    
-  		--gfx_tri_wire( scr_vtx[t[1]], scr_vtx[t[2]], scr_vtx[t[3]] )
     end
    end
 	end
 end
 
-function draw_floor()
+function vgrad(y0, y1, i0, i1, g)
+ local s = i0
+ local ds_dy = (i1 - i0) / (y1 - y0)
+ for y=y0,y1 do
+  c1,c2,fp = gfx_dither( g, s )   
+  fillp(fp)
+  line(0,y, 127,y, c1 + c2 * 16)
 
-  stl = v2(0,0)
-  str = v2(127,0)
-  sbl = v2(0,127)
-  --sbr = v2(127,127)
-
-  vtl = vs_screen_to_viewport(stl)
-  vtr = vs_screen_to_viewport(str)
-  vbl = vs_screen_to_viewport(sbl)
-  --vbr = vs_screen_to_viewport(sbr)
-
-  vtl.z = vs.pdist
-  vtr.z = vs.pdist
-  vbl.z = vs.pdist
-  --vbr.z = vs.pdist
-
-  dtl = v3_mul_m3(vtl, vs.cam_to_world.r)
-  dtr = v3_mul_m3(vtr, vs.cam_to_world.r)
-  dbl = v3_mul_m3(vbl, vs.cam_to_world.r)
-  --dbr = v3_mul_m3(vbr, vs.cam_to_world.r)
-
-  d_dx = v3_mul_s(v3_sub(dtr,dtl), 1./128)
-  d_dy = v3_mul_s(v3_sub(dbl,dtl), 1./128)
-
-  d_row = dtl
- for y=0,127 do
-  dl = d_row
-  dr = v3_add(d_row, v3_mul_s(d_dx, 127))
-  
-
-  h = 0.0
-  tl = (h - vs.cam_to_world.t.y) / dl.y
-  tr = (h - vs.cam_to_world.t.y) / dr.y
-
-  --if ( dl.y > 0 ) return
-
-  il = v3_add(vs.cam_to_world.t, v3_mul_s(dl, tl))
-  ir = v3_add(vs.cam_to_world.t, v3_mul_s(dr, tr))
-
-  il = v3_mul_s(il, 16)
-  ir = v3_mul_s(ir, 16)
-  --uy = (y - vs.win.tl.x) / vs.win.size.y
-  --vy = uy * vs.vp.size.y + vs.vp.tl.y
-  --dh = h + vs.cam_to_world.t.y
-  --t = dh/vy
-
-  dix = (ir.x - il.x) / 128.0
-  diz = (ir.z - il.z) / 128.0
-
-  if (il.z % 1)<0.5 then
-  c = 0x33
-  else
-  c = 0x22
-  end
-
-  scan = 0x6000 + y * 64  
- 
-  ix = il.x
-  iz = il.z
-
-  for x=0,63 do
-   ix += dix
-   iz += diz
-   mx = flr(ix / 16)
-   mz = flr(iz / 16)
-   s = mget(mx % 16, mz % 16)
-   --c1 = sget(ix%16 + 8,iz%16)
-   c1 = sget(s * 8 + ix%8,iz%8)
-
-   ix += dix
-   iz += diz
-   mx = flr(ix / 16)
-   mz = flr(iz / 16)
-   s = mget(mx % 16, mz % 16)
-   --c1 = sget(ix%16 + 8,iz%16)
-   c2 = sget(s * 8 + ix%8,iz%8)
-   poke(scan+x,c1 + c2 * 16)
-  end
-
-  d_row = v3_add(d_row, d_dy)
+  s += ds_dy
  end
+end
+
+function draw_floor()
+ light = cam_to_world.r[3][3]
+ vgrad(0,63, 0.6 + light * 0.3, 0.1 + light * 0.05 , gradients[1] )
+ vgrad(64, 127, 0.1 + light * 0.05, 0.6+ light * 0.2, gradients[2] )
 end
 
 cam_pos = v3(0,1,-10)
@@ -1009,12 +1069,7 @@ function _draw()
 
 -- drawlist
 
-dl_type = { tri = 1 }
-drawlist = {}
-
-if 0 == 0 then 
-	
-	color(15)
+dl_reset()
 
 
    cam_move = v3(0,0,0)
@@ -1043,28 +1098,34 @@ if 0 == 0 then
    win = { tl = v2(0,0), br = v2(128,128) }
    vs_view_setup( cam_to_world, vp, pdist, win )
 
+if 0 == 0 then 
+	
+	color(15)
+ fillp()
 
-   --draw_floor()
+
+
+
+   draw_floor()
+ fillp()
+
 
  --rectfill(0,0,127,64, 1)
  --rectfill(0,128,127,64, 3)
 
 
 
-	y_rot = sys_time.t * 1
-	x_rot = sys_time.t * 0.234
+	local y_rot = sys_time.t * 1
+	local x_rot = sys_time.t * 0.234
 
-	obj_r1 = m3_rot_y(y_rot)
-	obj_r2 = m3_rot_x(x_rot)
+	local obj_r1 = m3_rot_y(y_rot)
+	local obj_r2 = m3_rot_x(x_rot)
 
-	obj_to_world =
+	local obj_to_world =
 		{ r=m3_mul( obj_r2, obj_r1 ), 
 		  t=v3( 0, 1, 0 ) }
 
-    vs_set_obj_mat( obj_to_world )
-
-    fillp()
-   gfx_3d_grid(6)
+   --gfx_3d_grid(6)
 
    --gfx_3d_sphere_outline( rt_apply( cube.bounds.c, obj_to_world ), cube.bounds.r )
    -- gfx_3d_sprite( rt_apply( cube.bounds.c, obj_to_world ), cube.bounds.r, cube.bounds.r * 0.75, 8, 0, 16, 16 )
@@ -1075,7 +1136,12 @@ if 0 == 0 then
    --end
 
 
-	  obj_draw( cube )
+	  obj_draw( cube, obj_to_world )
+
+   for x=2,5 do
+     obj_to_world.t.x = x * 4
+     obj_draw( cube, obj_to_world )
+   end    
 
 
 
@@ -1083,13 +1149,7 @@ if 0 == 0 then
 
 end
 
-	for item in all(drawlist) do
-  if item.t == dl_type.tri then
-   fillp(item.fp)
- 		gfx_tri_fill( item.a, item.b, item.c, item.co )
-  end
-	end
-
+ dl_draw()
 
 if 0 == 1 then
 	hline( 10, 50, 5, 0xfd )
