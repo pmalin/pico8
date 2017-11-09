@@ -268,23 +268,11 @@ end
 
 
 function vs_view_to_screen( v )
- local r = {}
-
  -- project onto screen at distance vs.pdist in view space
  local w = 1. / v.z
  local pp = v2_mul_s( v, vs.pdist * w )
-
  local ps = v2_add(v2_mul(pp, vs.st_scale), vs.st_offset)
- 
- --ps.x = pp.x * 64 + 64
- --ps.y = pp.y * 64 + 64
-
- r.x = ps.x
- r.y = ps.y
- r.z = v.z
- r.w = w
-
- return r
+ return {x=ps.x, y = ps.y, z=v.z, w = w }
 end
 
 function vs_screen_to_viewport( s )
@@ -331,7 +319,7 @@ function gfx_3d_line( a, b, col )
 end 
 
 function gfx_3d_grid( col )
- for i=-5, 5 do
+ for i=-5, 5, 2 do
   gfx_3d_line( v3(i, 0, -5), v3(i, 0, 5), col )
   gfx_3d_line( v3(-5, 0, i), v3(5, 0, i), col )
  end
@@ -701,8 +689,8 @@ function gfx_dither( grad, s )
 
    --pat = grad[flr(s * #grad) + 1]
    dc = #dither_patterns
-   d = dither_patterns[ mid( 1 + flr( g_f * (dc-1) ), 1, dc ) ]
-   return c1, c2, d
+   fp = dither_patterns[ mid( 1 + flr( g_f * (dc-1) ), 1, dc ) ]
+   return c1, c2, fp
 end
 
 
@@ -741,31 +729,12 @@ function dither_ramp()
 	end
 end
 
-function dither( a )
-	--return { 0x0000, 0x0002, 0x2002, 0x2022, 0x2222, 0x2224, 0x4224, 0x4244, 0x4444, 0x4449, 0x9449, 0x9499, 0x9999, 0x999a, 0xa99a, 0xa9aa, 0xaaaa, 0xaaa7, 0x7aa7, 0x7a77, 0x7777 }
-	result = {}
-	count = #a
-	for i = 1, count - 1 do
-		col_a = a[i]		
-		col_b = a[i+1]
-		add( result, 0x1111 * col_a + 0x0000 * col_b )
-		add( result, 0x1110 * col_a + 0x0001 * col_b )
-		add( result, 0x0110 * col_a + 0x1001 * col_b )
-		add( result, 0x0100 * col_a + 0x1011 * col_b )
-	end
-	add( result, 0x1111 * a[count] )
-	return result
-end
-
-
 gradients = { 
  {0x0, 0x2, 0x4, 0x9, 0xa, 0x7},  --yellow
  {0x0, 0x1, 0x3, 0xb, 0x7}, -- green
  {0x0, 0x1, 0xc, 0x7}, -- blue
  {0x0, 0x2, 0x8, 0xe, 0x7}  -- red
 }
-
-
 
 function perf_draw()
  clip()
@@ -922,15 +891,16 @@ function obj_draw( obj )
 
  		s = sat( ldotn * -0.5 + 0.5)
 
-   c1,c2,d = gfx_dither( gradients[t.c], s )   
+   c1,c2,fp = gfx_dither( gradients[t.c], s )   
    col = c1 + c2 * 16
 
-  		--add( drawlist.tri, { a=a, b=b, c=c, p=pat } )
+    
     if t.t != nil then
       gfx_tri_tex( a, b, c, t.t )
      else
-      fillp( d )
-      gfx_tri_fill( a, b, c, col )      
+     add( drawlist, { t=dl_type.tri, a=a, b=b, c=c, co=col, fp=fp } )
+      --fillp( fp )
+      --gfx_tri_fill( a, b, c, col )      
      end
 
   		
@@ -1037,8 +1007,10 @@ function _draw()
 
 	-- gfx_tri_fill( v2(10, 30), v2(50, 40), v2(25, 100), 0x1111 )
 
-	drawlist = { tri = {} }
+-- drawlist
 
+dl_type = { tri = 1 }
+drawlist = {}
 
 if 0 == 0 then 
 	
@@ -1091,7 +1063,8 @@ if 0 == 0 then
 
     vs_set_obj_mat( obj_to_world )
 
-   --gfx_3d_grid(6)
+    fillp()
+   gfx_3d_grid(6)
 
    --gfx_3d_sphere_outline( rt_apply( cube.bounds.c, obj_to_world ), cube.bounds.r )
    -- gfx_3d_sprite( rt_apply( cube.bounds.c, obj_to_world ), cube.bounds.r, cube.bounds.r * 0.75, 8, 0, 16, 16 )
@@ -1110,8 +1083,11 @@ if 0 == 0 then
 
 end
 
-	for t in all(drawlist.tri) do
-		gfx_tri_fill( t.a, t.b, t.c, t.p )
+	for item in all(drawlist) do
+  if item.t == dl_type.tri then
+   fillp(item.fp)
+ 		gfx_tri_fill( item.a, item.b, item.c, item.co )
+  end
 	end
 
 
