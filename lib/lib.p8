@@ -976,6 +976,10 @@ function obj_make_cube()
 		{ 3, 7, 8, t=nil, c = 4 },
 		{ 3, 4, 7, t=nil, c = 4 },
 	}
+
+ obj.line = {
+  { 1, 2, c = 1 }
+ }
 	
 	obj_finalize(obj)
 
@@ -1125,7 +1129,7 @@ if 0 == 0 then
 		{ r=m3_mul( obj_r2, obj_r1 ), 
 		  t=v3( 0, 1, 0 ) }
 
-   --gfx_3d_grid(6)
+   gfx_3d_grid(6)
 
    --gfx_3d_sphere_outline( rt_apply( cube.bounds.c, obj_to_world ), cube.bounds.r )
    -- gfx_3d_sprite( rt_apply( cube.bounds.c, obj_to_world ), cube.bounds.r, cube.bounds.r * 0.75, 8, 0, 16, 16 )
