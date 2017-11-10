@@ -454,9 +454,10 @@ end
 function gfx_3d_grid( col )
  if (not vs_cull_sphere( v3(0,0,0), sqrt(50) )) then return end
 
- for i=-5, 5 do
-  gfx_3d_line( v3(i, 0, -5), v3(i, 0, 5), col )
-  gfx_3d_line( v3(-5, 0, i), v3(5, 0, i), col )
+ local s = 4
+ for i=-s, s do
+  gfx_3d_line( v3(i, 0, -s), v3(i, 0, s), col )
+  gfx_3d_line( v3(-s, 0, i), v3(s, 0, i), col )
  end
 end
 
@@ -813,21 +814,24 @@ dither_patterns = {
 0b1111011111111111
 }
 
+dthi = 0
+
 function gfx_dither( grad, s )
-   gc = #grad
-   g = s * (gc-1)
-   g_i = flr(g)   
-   g_f = g - g_i
+   local gc = #grad
+   local g = s * (gc-1)
+   local g_i = flr(g)   
+   local g_f = g - g_i
 
-   g_i1 = mid( g_i + 1, 1, gc )
-   g_i2 = mid( g_i + 2, 1, gc )
+   local g_i1 = mid( g_i + 1, 1, gc )
+   local g_i2 = mid( g_i + 2, 1, gc )
 
-   c1 = grad[g_i1]
-   c2 = grad[g_i2]
+   local c1 = grad[g_i1]
+   local c2 = grad[g_i2]
 
    --pat = grad[flr(s * #grad) + 1]
-   dc = #dither_patterns
-   fp = dither_patterns[ mid( 1 + flr( g_f * (dc-1) ), 1, dc ) ]
+   local dc = #dither_patterns
+   local fp = dither_patterns[ mid( 1 + flr( g_f * (dc-1) ), 1, dc ) ]
+
    return c1, c2, fp
 end
 
@@ -848,23 +852,6 @@ end
 
 function _update60()
  update(1/60)
-end
-
-function dither_ramp()
-	ramp = {2,4,9,10,7}
-	for y=100,127 do
-		for x=0,127 do
-			f = x / 127
-			t = f * 4
-			rf = rnd(255) / 255.0
-			c = t + (rf - 0.5) * 2.0
-
-			ti = min( 4, max( 0, flr(c) ) )
-
-			col = ramp[ 1 + ti ]
-			pset(x,y,col)
-		end
-	end
 end
 
 gradients = { 
@@ -989,13 +976,30 @@ end
 function transform_vert( ov )
    local vv = rt_apply( ov, vs.obj_to_cam )
 
+   --local vw = rt_apply( ov, vs.obj_to_world )   
+   --local vv = rt_apply( vw, vs.world_to_cam )
    vv = vs_view_to_screen( vv )
-   vv.u = ov.u * vv.w
-   vv.v = ov.v * vv.w
+   
+   -- vv.u = ov.u * vv.w -- todo: remove if untextured
+   -- vv.v = ov.v * vv.w -- todo: remove if untextured
    return vv
 end
 
-function obj_draw( obj, obj_to_world )
+function transform_vert_shadow( ov )
+   --local vv = rt_apply( ov, vs.obj_to_cam )
+
+   local vw = rt_apply( ov, vs.obj_to_world )   
+   vw.x += vw.y
+   vw.y = 0
+   local vv = rt_apply( vw, vs.world_to_cam )
+   vv = vs_view_to_screen( vv )
+   
+   -- vv.u = ov.u * vv.w -- todo: remove if untextured
+   -- vv.v = ov.v * vv.w -- todo: remove if untextured
+   return vv
+end
+
+function obj_draw( obj, obj_to_world, shadow )
 
  bounds_c_world = rt_apply( obj.bounds.c, obj_to_world )
 
@@ -1003,14 +1007,26 @@ function obj_draw( obj, obj_to_world )
 
   vs_set_obj_mat( obj_to_world )
 
-  ldir = v3(0,1,0)
-  obj_ldir = v3_mul_m3( ldir, vs.world_to_obj_rot )
-
  	scr_vtx = {}
 
- 	for i,ov in pairs(obj.vtx) do
-   scr_vtx[i] = transform_vert(ov)
- 	end
+  if not shadow then
+  	for i,ov in pairs(obj.vtx) do
+    scr_vtx[i] = transform_vert(ov)
+  	end
+
+   ldir = v3(0,1,0)
+   obj_ldir = v3_mul_m3( ldir, vs.world_to_obj_rot )
+
+  else
+   for i,ov in pairs(obj.vtx) do
+    scr_vtx[i] = transform_vert_shadow(ov)
+   end   -- else code
+  end
+
+  for sv in all(scr_vtx) do
+   circ( sv.x, sv.y, 1.5, 4 )
+  end
+
 
  	for t in all(obj.tri) do
 
@@ -1022,15 +1038,24 @@ function obj_draw( obj, obj_to_world )
   if v2_cross( v2_sub( b, a ), v2_sub( c, b ) ) < 0.0 then
    if a.z > vs.near and b.z > vs.near and c.z > vs.near then
 
-  		ldotn = v3_dot(obj_ldir, t.n)
+   local col, fp
 
-  		s = sat( ldotn * -0.5 + 0.5)
+  if shadow then
+   fillp(0b0101101001011010.1)
+   gfx_tri_fill( a, b, c, 0 )
 
+  else
+    ldotn = v3_dot(obj_ldir, t.n)
+    s = sat( ldotn * -0.5 + 0.5)
+
+    local c1, c2
     c1,c2,fp = gfx_dither( gradients[t.c], s )   
-    local col = c1 + c2 * 16
+    col = c1 + c2 * 16  
 
      local key = mid(a.z, b.z, c.z)
      add( drawlist, { key=key, fn = dl_tri, value = {a=a, b=b, c=c, col=col, fp=fp } } )
+  end
+
       --fillp( fp )
       --gfx_tri_tex( a, b, c, t.t )
       --gfx_tri_fill( a, b, c, col )         		
@@ -1040,6 +1065,46 @@ function obj_draw( obj, obj_to_world )
     end
    end
 	end
+end
+
+
+function scene_draw( floor )
+
+   if ( floor) then 
+    draw_floor()
+    fillp()
+
+    gfx_3d_grid(6)
+   end
+
+
+ local y_rot = sys_time.t * 1
+ local x_rot = sys_time.t * 0.234
+
+ local obj_r1 = m3_rot_y(y_rot)
+ local obj_r2 = m3_rot_x(x_rot)
+
+ local obj_to_world =
+  { r=m3_mul( obj_r2, obj_r1 ), 
+    t=v3( 0, 2, 0 ) }
+
+   --gfx_3d_sphere_outline( rt_apply( cube.bounds.c, obj_to_world ), cube.bounds.r )
+   -- gfx_3d_sprite( rt_apply( cube.bounds.c, obj_to_world ), cube.bounds.r, cube.bounds.r * 0.75, 8, 0, 16, 16 )
+   
+   --for z=10,-10,-1 do
+    --gfx_3d_sprite( v3(4,1,z), 0.5, 1, 40, 0, 8, 16 )
+    --gfx_3d_sprite( v3(-4,1,z), 0.5, 1, 40, 0, 8, 16 )
+   --end
+
+
+   obj_draw( cube, obj_to_world, floor )
+
+   for x=2,5 do
+     obj_to_world.t.x = x * 4
+     obj_draw( cube, obj_to_world, floor )
+   end    
+
+
 end
 
 function vgrad(y0, y1, i0, i1, g)
@@ -1055,9 +1120,22 @@ function vgrad(y0, y1, i0, i1, g)
 end
 
 function draw_floor()
- light = cam_to_world.r[3][3]
- vgrad(0,63, 0.6 + light * 0.3, 0.1 + light * 0.05 , gradients[1] )
- vgrad(64, 127, 0.1 + light * 0.05, 0.6+ light * 0.2, gradients[2] )
+ local d = 1000
+ local za = vs.cam_to_world.r[3]
+ local z = v3(za[1],za[2],za[3])
+ z.y = 0
+ z = v3_normalize(z)
+ pw = v3_add(v3_mul_s(z,d), vs.cam_to_world.t)
+ pw.y = 0
+ 
+ local vv = rt_apply( pw, vs.world_to_cam )
+ vv = vs_view_to_screen( vv )
+
+ y = vv.y
+ if ( y <= 127 ) rectfill(0,0,127,y,1)
+ if ( y > 0 ) rectfill(0,y,127,127,3)
+ --vgrad(0,63, 0.6 + light * 0.3, 0.1 + light * 0.05 , gradients[1] )
+ --vgrad(64, 127, 0.1 + light * 0.05, 0.6+ light * 0.2, gradients[2] )
 end
 
 cam_pos = v3(0,1,-10)
@@ -1109,90 +1187,19 @@ if 0 == 0 then
 
 
 
-
-   draw_floor()
- fillp()
-
-
  --rectfill(0,0,127,64, 1)
  --rectfill(0,128,127,64, 3)
 
 
 
-	local y_rot = sys_time.t * 1
-	local x_rot = sys_time.t * 0.234
-
-	local obj_r1 = m3_rot_y(y_rot)
-	local obj_r2 = m3_rot_x(x_rot)
-
-	local obj_to_world =
-		{ r=m3_mul( obj_r2, obj_r1 ), 
-		  t=v3( 0, 1, 0 ) }
-
-   gfx_3d_grid(6)
-
-   --gfx_3d_sphere_outline( rt_apply( cube.bounds.c, obj_to_world ), cube.bounds.r )
-   -- gfx_3d_sprite( rt_apply( cube.bounds.c, obj_to_world ), cube.bounds.r, cube.bounds.r * 0.75, 8, 0, 16, 16 )
-   
-   --for z=10,-10,-1 do
-    --gfx_3d_sprite( v3(4,1,z), 0.5, 1, 40, 0, 8, 16 )
-    --gfx_3d_sprite( v3(-4,1,z), 0.5, 1, 40, 0, 8, 16 )
-   --end
-
-
-	  obj_draw( cube, obj_to_world )
-
-   for x=2,5 do
-     obj_to_world.t.x = x * 4
-     obj_draw( cube, obj_to_world )
-   end    
-
-
+ scene_draw( true )
+ scene_draw( false )
 
    --gfx_3d_line( v3(0,0,0), v3(3, 0, 0), 4)
 
 end
 
  dl_draw()
-
-if 0 == 1 then
-	hline( 10, 50, 5, 0xfd )
-	hline( 11, 51, 7, 0xfd )
-	hline( 12, 12, 9, 0xfd )
-	hline( 13, 13, 10, 0xfd )
-	hline( 14, 14, 11, 0xfd )
-
-	hline( 12, 13, 12, 0xfd )
-	hline( 13, 14, 13, 0xfd )
-	hline( 14, 15, 14, 0xfd )
-
-	hline( 12, 14, 15, 0xfd )
-	hline( 13, 15, 16, 0xfd )
-	hline( 14, 16, 17, 0xfd )
-end	
-
-if 0 == 1 then
-	--x1 = 64 + sin(fr * 0.01) * 100
-	x1 = -81.23
-	x2 = -10
-	x3 = 140
-	for y=5,110 do
-		yc = y - 5
-		xl = x1 + (yc / 105) * (x2 - x1)
-		xr = x1 + (yc / 105) * (x3 - x1)
-		if fr % 2 == 0 then
-
-			hline(xl, xr , y, 0xfd )
-		else
-			line(xl, y, xr, y, 0xf )
-		end
-	end	
-end
-
-
-if 0 == 1 then
-	dither_ramp()
-end
 
 	perf_draw()
 end
