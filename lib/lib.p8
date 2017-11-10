@@ -425,6 +425,12 @@ function dl_tri(v)
    gfx_tri_fill( v.a, v.b, v.c, v.col )
 end   
 
+function dl_line(v)
+   fillp()
+   line(v.a.x, v.a.y, v.b.x, v.b.y, v.col)
+end   
+
+
 
 function gfx_line( a, b, col )
   line(a.x, a.y, b.x, b.y, col)
@@ -975,7 +981,10 @@ function obj_make_cube()
 	}
 
  obj.line = {
-  { 1, 2, c = 1 }
+  { 1, 2, c = 7 },
+  { 2, 4, c = 7 },
+  { 4, 3, c = 7 },
+  { 3, 1, c = 7 }
  }
 	
 	obj_finalize(obj)
@@ -1057,7 +1066,7 @@ function obj_draw( obj, obj_to_world, shadow )
    c1,c2,fp = gfx_dither( gradients[t.c], s )   
    col = c1 + c2 * 16  
 
-    local key = mid(a.z, b.z, c.z)
+    local key = (a.z + b.z + c.z) / 3
     add( drawlist, { key=key, fn = dl_tri, value = {a=a, b=b, c=c, col=col, fp=fp } } )
  end
 
@@ -1070,8 +1079,23 @@ function obj_draw( obj, obj_to_world, shadow )
    end
   end
 
+ for l in all(obj.line) do
+  local a = scr_vtx[l[1]]
+  local b = scr_vtx[l[2]]
+  if a.z > vs.near and b.z > vs.near then
+   if shadow then
+    fillp(0b0101101001011010.1)
+    line(a.x, a.y, b.x, b.y, 0)
+   else
+    local key = (a.z + b.z) / 2
+    add( drawlist, { key=key, fn = dl_line, value = {a=a, b=b, col=l.c } } )
+   end
+  end
+ end
+
  dl_draw()
  dl_reset()
+
 
 end
 
@@ -1237,15 +1261,18 @@ dl_reset()
       if (btn(4)) then
        if ( btn(0))cam_move.x-=.1
        if ( btn(1))cam_move.x+=.1
-      else
-       if ( btn(0))cam_angles.y-=.01
-       if ( btn(1))cam_angles.y+=.01
-      end
 
        if ( btn(2))cam_move.z+=.1
        if ( btn(3))cam_move.z-=.1
+      else
+       if ( btn(0))cam_angles.y-=.01
+       if ( btn(1))cam_angles.y+=.01
 
-   cam_m = m3_rot_y(cam_angles.y)
+       if ( btn(2))cam_angles.x+=.01
+       if ( btn(3))cam_angles.x-=.01
+      end
+
+   cam_m = m3_mul( m3_rot_y(cam_angles.y), m3_rot_x(cam_angles.x) )
 
       cam_pos = v3_add( cam_pos, v3_mul_m3(cam_move, cam_m) )
 
