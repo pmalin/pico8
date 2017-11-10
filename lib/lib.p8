@@ -879,16 +879,19 @@ function init_dither()
 end
 
 function gfx_dither( grad, s )
+if grad > 3 then grad = 3 end
  return dither_tables[grad][1 + flr(s * 255)]
 end
 
 obj_cube = {}
 obj_torus = {}
+obj_fox = {}
 sys_time = { t=0, dt=1/60, b=60 }
 
 function _init()
 	obj_cube = obj_make_cube()
  obj_torus = obj_make_torus()
+ obj_fox = obj_make_fox()
  init_dither()
 end
 
@@ -998,6 +1001,68 @@ function obj_make_cube()
 
 	return obj
 end
+
+function obj_make_fox()
+ obj = {}
+ obj.vtx = {}
+
+obj.vtx[1] = v3(0.986111,-0.025855,0.300339)
+obj.vtx[2] = v3(-1.005903,-0.025855,0.300340)
+obj.vtx[3] = v3(-0.005903,0.000000,-3.763774)
+obj.vtx[4] = v3(-0.005903,1.000000,0.300339)
+obj.vtx[5] = v3(-0.005903,0.525322,1.004954)
+obj.vtx[6] = v3(-1.636132,-0.269847,-0.689093)
+obj.vtx[7] = v3(-1.874824,0.244348,0.182332)
+obj.vtx[8] = v3(-1.743159,1.274788,1.228072)
+obj.vtx[9] = v3(-1.264151,0.050001,0.029176)
+obj.vtx[10] = v3(-4.5,-1.035814,1.553706)
+obj.vtx[11] = v3(-1.189264,-0.440330,-1.404416)
+obj.vtx[12] = v3(-1.015540,0.175132,0.075046)
+obj.vtx[13] = v3(1.851038,0.244348,0.182331)
+obj.vtx[14] = v3(1.240366,0.050001,0.029176)
+obj.vtx[15] = v3(0.991755,0.175132,0.075046)
+obj.vtx[16] = v3(1.612347,-0.269847,-0.689093)
+obj.vtx[17] = v3(4.5,-1.035814,1.553705)
+obj.vtx[18] = v3(1.165478,-0.440330,-1.404416)
+obj.vtx[19] = v3(1.719373,1.274788,1.22807)
+
+ obj.tri = { 
+{1,4,5,  c=5 }, --cowel left
+{4,2,5,  c=6 }, --cowel right
+{2,1,5,  c=9 }, --engine
+{2,4,3,  c=7 }, --ship right
+{1,2,3,  c=5 }, --ship bottom
+{4,1,3,  c=6 }, --ship left
+{6,7,2,  c=7 }, --right wing inside
+{10,7,6, c=6 }, --right wing front --hidden
+{10,2,7, c=6 }, --right wing top
+{6,2,10, c=5}, --right wing bottom
+{11,9,8, c=1},
+{9,8,12, c=1}, --right spoil top
+{9,11,12, c=1}, --right spoil side
+{11,12,8, c=1}, --right spoil front
+{17,16,13, c=6}, --right wing front
+{18,19,14, c=1 },
+{14,19,15, c=1 }, --left spoil top
+{14,15,18, c=1 }, --left spoil side
+{18,15,19, c=1 }, --left spoil bottom
+{17,1,13, c=6 }, --left wing back
+{16,13,1, c=6 }, 
+{16,17,1, c=5 } --left wing bottom
+ }
+
+ --obj.line = {
+  --{ 1, 2, c = 7 },
+  --{ 2, 4, c = 7 },
+  --{ 4, 3, c = 7 },
+  --{ 3, 1, c = 7 }
+ --}
+ 
+ obj_finalize(obj)
+
+ return obj
+end
+
 
 function obj_make_torus()
  r0 = 0.75
@@ -1258,7 +1323,7 @@ function scene_build()
    end
 
    --scene_add_obj( obj_cube, obj_to_world )
-   scene_add_obj( obj_torus, obj_to_world )
+   scene_add_obj( obj_fox, obj_to_world )
  
    for x=2,5 do
      obj_to_world.t.x = x * 4
@@ -1310,9 +1375,9 @@ function draw_floor()
  y = vv.y
  if ( y <= 127 ) rectfill(0,0,127,y,1)
  if ( y > 0 ) rectfill(0,y,127,127,3)
- light = 0
- vgrad(0,y, 0.6 + light * 0.3, 0.1 + light * 0.05 , 1 )
- vgrad(y+1, 127, 0.1 + light * 0.05, 0.6+ light * 0.2, 2 )
+ --light = 0
+ --vgrad(0,y, 0.6 + light * 0.3, 0.1 + light * 0.05 , 1 )
+ --vgrad(y+1, 127, 0.1 + light * 0.05, 0.6+ light * 0.2, 2 )
 end
 
 cam_pos = v3(0,1,-10)
