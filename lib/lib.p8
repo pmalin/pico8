@@ -345,9 +345,8 @@ function vs_view_setup( cam_to_world, vp, pdist, win, sc )
  vs.near = 0.1
  vs.vp = vp
  vs.pdist = pdist
- vs.win = win
- vs.sc = sc
- if (sc == nil) vs.sc = win
+ vs.win = win 
+ if (sc == nil) vs.sc = win else vs.sc = sc
 
  vs.sct = vs.sc.tl.y
  vs.scb = vs.sc.br.y - 1
@@ -359,25 +358,12 @@ function vs_view_setup( cam_to_world, vp, pdist, win, sc )
 
  vs.win.size = v2_sub( vs.win.br, vs.win.tl )
 
- -- viewport to screen
-
- -- transform to viewport
- --pv = v2_sub( pp, vs.vp.tl ) -- a
- --pv = v2_mul( pv, vs.vp.rcp_size ) -- b
-
--- transform to screen
- --ps = v2_mul( pv, vs.win.size ) -- c
- --ps = v2_add( ps, vs.win.tl ) -- d
-
--- r = x * bc + d - a * bc
-vs.st_scale = v2_mul( vs.vp.rcp_size, vs.win.size )
-vs.st_offset = v2_mul( v2_sub( vs.win.tl, vs.vp.tl ), vs.st_scale )
-
+ vs.st_scale = v2_mul( vs.vp.rcp_size, vs.win.size )
+ vs.st_offset = v2_mul( v2_sub( vs.win.tl, vs.vp.tl ), vs.st_scale )
 
  vs.cam_to_world = cam_to_world
  vs.world_to_cam = rt_inv( cam_to_world )
  vs.cam_z = m3_get_az( cam_to_world.r )
-
 
  vs_frustum_setup()
 end
@@ -605,7 +591,7 @@ function gfx_tri_fill( a, b, c, col )
  byc-=1
 
 	for py=ayc,byc do
-		line( ab_x, py, ac_x, py, col )
+		rectfill( ab_x, py, ac_x, py, col )
 		ab_x += dabx_dy
 		ac_x += dacx_dy
 	end
@@ -614,7 +600,7 @@ function gfx_tri_fill( a, b, c, col )
  cyc-=1
 
 	for py=byc,cyc do
-  line( bc_x, py, ac_x, py, col )
+  rectfill( bc_x, py, ac_x, py, col )
 		bc_x += dbcx_dy
 		ac_x += dacx_dy
 	end
@@ -1110,7 +1096,7 @@ end
 
 function transform_vert_shadow( ov )
    local vw = rt_apply( ov, vs.obj_to_world )   
-   vw.x += vw.y
+   vw.x += vw.y * 0.2
    vw.y = 0
    return vs_view_to_screen( rt_apply( vw, vs.world_to_cam ) )
 end
@@ -1310,16 +1296,14 @@ function scene_build()
 
  local obj_to_world =
   { r=m3_mul( obj_r2, obj_r1 ), 
-    t=v3( 0, 2, 0 ) }
+    t=v3( 0, 5, 0 ) }
 
    --gfx_3d_sphere_outline( rt_apply( cube.bounds.c, obj_to_world ), cube.bounds.r )
    -- gfx_3d_sprite( rt_apply( cube.bounds.c, obj_to_world ), cube.bounds.r, cube.bounds.r * 0.75, 8, 0, 16, 16 )
    
    for z=3,-3,-1 do
-    scene_add_sprite( v3(4,0.5,z * 4), spr_def )
-    scene_add_sprite( v3(-4,0.5,z * 4), spr_def )
-    --gfx_3d_sprite( v3(4,1,z), 0.5, 1, 40, 0, 8, 16 )
-    --gfx_3d_sprite( v3(-4,1,z), 0.5, 1, 40, 0, 8, 16 )
+    --scene_add_sprite( v3(4,0.5,z * 4), spr_def )
+    --scene_add_sprite( v3(-4,0.5,z * 4), spr_def )
    end
 
    --scene_add_obj( obj_cube, obj_to_world )
@@ -1373,11 +1357,24 @@ function draw_floor()
  vv = vs_view_to_screen( vv )
 
  y = vv.y
- if ( y <= 127 ) rectfill(0,0,127,y,1)
- if ( y > 0 ) rectfill(0,y,127,127,3)
+ --if ( y <= 127 ) rectfill(0,0,127,y,1)
+ --if ( y > 0 ) rectfill(0,y,127,127,3)
  --light = 0
  --vgrad(0,y, 0.6 + light * 0.3, 0.1 + light * 0.05 , 1 )
  --vgrad(y+1, 127, 0.1 + light * 0.05, 0.6+ light * 0.2, 2 )
+
+ vcam = v3(0,0,0)
+ vtop = v3(0,vs.vp.tl.y, vs.pdist )
+ vbot = v3(0,vs.vp.br.y, vs.pdist )
+
+ for y=0,127 do
+  c = 1
+  s = 0.5
+  di = gfx_dither( c, s )
+  fillp(di.f)
+
+  rectfill(0,y,127,y,di.c)
+ end
 end
 
 cam_pos = v3(0,1,-10)
@@ -1385,7 +1382,7 @@ cam_angles = v3(0,0,0)
 
 function _draw()
 
-	cls()
+	--cls()
 
 	--map(0,0, 0,0, 16,16)
 
