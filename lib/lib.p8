@@ -594,20 +594,20 @@ function gfx_tri_fill( a, b, c, col )
  cyc = mid( ceil(c.y), vs.sct, vs.scb )
 
  -- init edges
-	dab_dy_x = (b.x - a.x) / (b.y - a.y)
-	dac_dy_x = (c.x - a.x) / (c.y - a.y)
- dbc_dy_x = (c.x - b.x) / (c.y - b.y)  
+	dabx_dy = (b.x - a.x) / (b.y - a.y)
+	dacx_dy = (c.x - a.x) / (c.y - a.y)
+ dbcx_dy = (c.x - b.x) / (c.y - b.y)  
 
-	ab_x = a.x + (ayc - a.y) * dab_dy_x
-	ac_x = a.x + (ayc - a.y) * dac_dy_x
- bc_x = b.x + (byc - b.y) * dbc_dy_x
+	ab_x = a.x + (ayc - a.y) * dabx_dy
+	ac_x = a.x + (ayc - a.y) * dacx_dy
+ bc_x = b.x + (byc - b.y) * dbcx_dy
 
  byc-=1
 
 	for py=ayc,byc do
 		line( ab_x, py, ac_x, py, col )
-		ab_x += dab_dy_x
-		ac_x += dac_dy_x
+		ab_x += dabx_dy
+		ac_x += dacx_dy
 	end
 
  byc+=1
@@ -615,8 +615,8 @@ function gfx_tri_fill( a, b, c, col )
 
 	for py=byc,cyc do
   line( bc_x, py, ac_x, py, col )
-		bc_x += dbc_dy_x
-		ac_x += dac_dy_x
+		bc_x += dbcx_dy
+		ac_x += dacx_dy
 	end
 end
 
@@ -838,9 +838,7 @@ dither_patterns = {
 0b1111011111111111
 }
 
-dthi = 0
-
-function gfx_dither( grad, s )
+function gfx_dither_calc( grad, s )
    local gc = #grad
    local g = s * (gc-1)
    local g_i = flr(g)   
@@ -851,31 +849,12 @@ function gfx_dither( grad, s )
 
    local c1 = grad[g_i1]
    local c2 = grad[g_i2]
+   local col = c1 + c2 * 16 
 
-   --pat = grad[flr(s * #grad) + 1]
    local dc = #dither_patterns
    local fp = dither_patterns[ mid( 1 + flr( g_f * (dc-1) ), 1, dc ) ]
 
-   return c1, c2, fp
-end
-
-
-obj_cube = {}
-sys_time = { t=0, dt=1/60 }
-
-function _init()
-	obj_cube = obj_make_cube()
-
-end
-
-function update(dt)
- sys_time.dt = dt
- sys_time.t += dt
-end
-
-
-function _update60()
- update(1/60)
+   return {c = col, f = fp }
 end
 
 gradients = { 
@@ -885,15 +864,61 @@ gradients = {
  {0x0, 0x2, 0x8, 0xe, 0x7}  -- red
 }
 
+dither_tables = {}
+
+function init_dither()
+ dither_tables = {}
+ for grad in all(gradients) do
+  dt = {}
+  for i=0,255 do
+   s = i/255
+   dt[i+1] = gfx_dither_calc(grad,s)
+  end
+  add(dither_tables, dt)
+ end
+end
+
+function gfx_dither( grad, s )
+ return dither_tables[grad][1 + flr(s * 255)]
+end
+
+obj_cube = {}
+obj_torus = {}
+sys_time = { t=0, dt=1/60, b=60 }
+
+function _init()
+	obj_cube = obj_make_cube()
+ obj_torus = obj_make_torus()
+ init_dither()
+end
+
+function update(dt)
+ sys_time.dt = dt
+ sys_time.t += dt
+end
+
+
+function _update60()
+ sys_time.b=60
+ update(1/sys_time.b)
+end
+
+--function _update()
+-- sys_time.b=30
+-- update(1/sys_time.b)
+--end
+
 function perf_draw()
  clip()
  local cpu=flr(stat(1)*100)
- local fps=60/ceil(stat(1))
+ local fps=sys_time.b/ceil(stat(1))
+ local mem=flr(stat(0))
  local perf=
   cpu .. "% cpu @ " ..
-  fps ..  " fps"
+  fps ..  " fps " ..
+  mem .. " mb"
  print(perf,0,122,0)
- print(perf,0,121,fps==60 and 7 or 8)
+ print(perf,0,121,fps==sys_time.b and 7 or 8)
 end
 
 function obj_calc_normals()
@@ -939,153 +964,141 @@ function obj_make_cube()
 	obj.vtx = {}
 
 	obj.vtx[1] = v3(-1, -1, -1)
-	obj.vtx[1].u = 0
-	obj.vtx[1].v = 0
-
 	obj.vtx[2] = v3(1, -1, -1)
-	obj.vtx[2].u = 16
-	obj.vtx[2].v = 0
-
 	obj.vtx[3] = v3(-1, 1, -1)
-	obj.vtx[3].u = 0
-	obj.vtx[3].v = 16
-
 	obj.vtx[4] = v3(1, 1, -1)
-	obj.vtx[4].u = 16
-	obj.vtx[4].v = 16
-
-
 	obj.vtx[5] = v3(1, -1, 1)
-	obj.vtx[5].u = 0
-	obj.vtx[5].v = 0
-
 	obj.vtx[6] = v3(-1, -1, 1)
-	obj.vtx[6].u = 16
-	obj.vtx[6].v = 0
-
 	obj.vtx[7] = v3(1, 1, 1)
-	obj.vtx[7].u = 0
-	obj.vtx[7].v = 16
-
 	obj.vtx[8] = v3(-1, 1, 1)
-	obj.vtx[8].u = 16
-	obj.vtx[8].v = 16
-
-	tex = { x = 8, y = 0, w = 16, h = 16 }
 
 	obj.tri = { 
-		{ 1, 2, 3, t=nil, c = 1 },
-		{ 2, 4, 3, t=nil, c = 1 },
-		{ 5, 6, 7, t=nil, c = 1 },
-		{ 6, 8, 7, t=nil, c = 1 },
-		{ 6, 1, 8, t=nil, c = 2 },
-		{ 8, 1, 3, t=nil, c = 2 },
-		{ 2, 5, 7, t=nil, c = 2 },
-		{ 2, 7, 4, t=nil, c = 2 },
-		{ 6, 5, 1, t=nil, c = 3 },
-		{ 5, 2, 1, t=nil, c = 3 },
-		{ 3, 7, 8, t=nil, c = 4 },
-		{ 3, 4, 7, t=nil, c = 4 },
+		{ 1, 2, 3, c = 1 },
+		{ 2, 4, 3, c = 1 },
+		{ 5, 6, 7, c = 1 },
+		{ 6, 8, 7, c = 1 },
+		{ 6, 1, 8, c = 2 },
+		{ 8, 1, 3, c = 2 },
+		{ 2, 5, 7, c = 2 },
+		{ 2, 7, 4, c = 2 },
+		{ 6, 5, 1, c = 3 },
+		{ 5, 2, 1, c = 3 },
+		{ 3, 7, 8, c = 4 },
+		{ 3, 4, 7, c = 4 },
 	}
 
- obj.line = {
-  { 1, 2, c = 7 },
-  { 2, 4, c = 7 },
-  { 4, 3, c = 7 },
-  { 3, 1, c = 7 }
- }
+ --obj.line = {
+  --{ 1, 2, c = 7 },
+  --{ 2, 4, c = 7 },
+  --{ 4, 3, c = 7 },
+  --{ 3, 1, c = 7 }
+ --}
 	
 	obj_finalize(obj)
 
 	return obj
 end
 
-function transform_vert( ov )
-   local vv = rt_apply( ov, vs.obj_to_cam )
+function obj_make_torus()
+ r0 = 0.75
+ r1 = .5
 
-   --local vw = rt_apply( ov, vs.obj_to_world )   
-   --local vv = rt_apply( vw, vs.world_to_cam )
-   vv = vs_view_to_screen( vv )
-   
-   -- vv.u = ov.u * vv.w -- todo: remove if untextured
-   -- vv.v = ov.v * vv.w -- todo: remove if untextured
-   return vv
+ sweepsteps = 6
+ steps = 6
+
+ obj = {}
+ obj.vtx = {}
+ 
+ for step=0,steps-1 do
+  stept = step / steps
+  v = v3(0, sin(stept) * r1, cos(stept) * r1 + r0)
+
+  for sweep=0,sweepsteps-1 do
+   sweept = sweep / sweepsteps
+
+   idx = step * sweepsteps + sweep + 1
+   obj.vtx[idx] = v3_rot_y(v, sweept)
+  end
+ end
+
+ obj.tri = {}
+ for step=0,steps-1 do
+  step1 = (step + 1) % steps
+  for sweep=0,sweepsteps-1 do
+   sweep1 = (sweep + 1) % sweepsteps
+
+   i0 = 1+ step * sweepsteps + sweep
+   i1 = 1+ step1 * sweepsteps + sweep
+   i2 = 1+ step1 * sweepsteps + sweep1
+   i3 = 1+ step * sweepsteps + sweep1
+   add( obj.tri, {i0, i1, i2, c=1 } ) 
+   add( obj.tri, {i0, i2, i3, c=1 } ) 
+  end
+ end  
+
+ obj.line = {}
+ 
+ obj_finalize(obj)
+
+ return obj
 end
 
 function transform_vert_shadow( ov )
-   --local vv = rt_apply( ov, vs.obj_to_cam )
-
    local vw = rt_apply( ov, vs.obj_to_world )   
    vw.x += vw.y
    vw.y = 0
-   local vv = rt_apply( vw, vs.world_to_cam )
-   vv = vs_view_to_screen( vv )
-   
-   -- vv.u = ov.u * vv.w -- todo: remove if untextured
-   -- vv.v = ov.v * vv.w -- todo: remove if untextured
-   return vv
+   return vs_view_to_screen( rt_apply( vw, vs.world_to_cam ) )
 end
 
 function obj_draw( obj, obj_to_world, shadow )
  vs_set_obj_mat( obj_to_world )
 
-	scr_vtx = {}
+	local scr_vtx = {}
 
  if not shadow then
  	for i,ov in pairs(obj.vtx) do
-   scr_vtx[i] = transform_vert(ov)
+   scr_vtx[i] = vs_view_to_screen( rt_apply( ov, vs.obj_to_cam ) )
  	end
 
   ldir = v3(0,1,0)
   obj_ldir = v3_mul_m3( ldir, vs.world_to_obj_rot )
-
  else
   for i,ov in pairs(obj.vtx) do
    scr_vtx[i] = transform_vert_shadow(ov)
-  end   -- else code
+  end
  end
-
- --for sv in all(scr_vtx) do
-  --circ( sv.x, sv.y, 1.5, 4 )
- --end
-
 
 	for t in all(obj.tri) do
+  local a = scr_vtx[t[1]]
+  local b = scr_vtx[t[2]]
+  local c = scr_vtx[t[3]]
 
- a = scr_vtx[t[1]]
- b = scr_vtx[t[2]]
- c = scr_vtx[t[3]]
+  -- backface cull
+  if v2_cross( v2_sub( b, a ), v2_sub( c, b ) ) < 0.0 then
+   if a.z > vs.near and b.z > vs.near and c.z > vs.near then
 
- -- backface cull
- if v2_cross( v2_sub( b, a ), v2_sub( c, b ) ) < 0.0 then
-  if a.z > vs.near and b.z > vs.near and c.z > vs.near then
+    local col, fp
 
-  local col, fp
+    if shadow then
+     fillp(0b0101101001011010.1)
+     gfx_tri_fill( a, b, c, 0 )
 
- if shadow then
-  fillp(0b0101101001011010.1)
-  gfx_tri_fill( a, b, c, 0 )
+    else
+      ldotn = v3_dot(obj_ldir, t.n)
+      s = sat( ldotn * -0.5 + 0.5)
 
- else
-   ldotn = v3_dot(obj_ldir, t.n)
-   s = sat( ldotn * -0.5 + 0.5)
+      local c1, c2
+      d = gfx_dither( t.c, s )          
 
-   local c1, c2
-   c1,c2,fp = gfx_dither( gradients[t.c], s )   
-   col = c1 + c2 * 16  
+      --fillp(fp)
+      --gfx_tri_fill( a, b, c, col )
 
-    local key = (a.z + b.z + c.z) / 3
-    add( drawlist, { key=key, fn = dl_tri, value = {a=a, b=b, c=c, col=col, fp=fp } } )
- end
-
-     --fillp( fp )
-     --gfx_tri_tex( a, b, c, t.t )
-     --gfx_tri_fill( a, b, c, col )         		
-  		--gfx_tri_bary( scr_vtx[t[1]], scr_vtx[t[2]], scr_vtx[t[3]], t.t )     
-  		--gfx_tri_wire( scr_vtx[t[1]], scr_vtx[t[2]], scr_vtx[t[3]] )
+      local key = (a.z + b.z + c.z) / 3
+      add( drawlist, { key=key, fn = dl_tri, value = {a=a, b=b, c=c, col=d.c, fp=d.f } } )
     end
    end
   end
+ end
 
  for l in all(obj.line) do
   local a = scr_vtx[l[1]]
@@ -1103,8 +1116,6 @@ function obj_draw( obj, obj_to_world, shadow )
 
  dl_draw()
  dl_reset()
-
-
 end
 
 
@@ -1246,7 +1257,8 @@ function scene_build()
     --gfx_3d_sprite( v3(-4,1,z), 0.5, 1, 40, 0, 8, 16 )
    end
 
-   scene_add_obj( obj_cube, obj_to_world )
+   --scene_add_obj( obj_cube, obj_to_world )
+   scene_add_obj( obj_torus, obj_to_world )
  
    for x=2,5 do
      obj_to_world.t.x = x * 4
@@ -1260,9 +1272,9 @@ function vgrad(y0, y1, i0, i1, g)
  local s = i0
  local ds_dy = (i1 - i0) / (y1 - y0)
  for y=y0,y1 do
-  c1,c2,fp = gfx_dither( g, s )   
-  fillp(fp)
-  line(0,y, 127,y, c1 + c2 * 16)
+  d = gfx_dither( g, s )
+  fillp(d.f)
+  rect(0,y, 127,y, d.c)
 
   s += ds_dy
  end
@@ -1298,8 +1310,9 @@ function draw_floor()
  y = vv.y
  if ( y <= 127 ) rectfill(0,0,127,y,1)
  if ( y > 0 ) rectfill(0,y,127,127,3)
- --vgrad(0,63, 0.6 + light * 0.3, 0.1 + light * 0.05 , gradients[1] )
- --vgrad(64, 127, 0.1 + light * 0.05, 0.6+ light * 0.2, gradients[2] )
+ light = 0
+ vgrad(0,y, 0.6 + light * 0.3, 0.1 + light * 0.05 , 1 )
+ vgrad(y+1, 127, 0.1 + light * 0.05, 0.6+ light * 0.2, 2 )
 end
 
 cam_pos = v3(0,1,-10)
