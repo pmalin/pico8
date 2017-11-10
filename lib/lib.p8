@@ -166,6 +166,16 @@ function m3_id()
 	return {{1,0,0},{0,1,0},{0,0,1}}
 end	
 
+function m3_get_ax(m)
+ return v3(m[1][1], m[1][2], m[1][3])
+end
+function m3_get_ay(m)
+ return v3(m[2][1], m[2][2], m[2][3])
+end
+
+function m3_get_az(m)
+ return v3(m[3][1], m[3][2], m[3][3])
+end
 
 function m3_rot_x(t)
 	s = sin(t)
@@ -836,11 +846,11 @@ function gfx_dither( grad, s )
 end
 
 
-cube = {}
+obj_cube = {}
 sys_time = { t=0, dt=1/60 }
 
 function _init()
-	cube = obj_make_cube()
+	obj_cube = obj_make_cube()
 
 end
 
@@ -1000,83 +1010,142 @@ function transform_vert_shadow( ov )
 end
 
 function obj_draw( obj, obj_to_world, shadow )
+ vs_set_obj_mat( obj_to_world )
 
- bounds_c_world = rt_apply( obj.bounds.c, obj_to_world )
+	scr_vtx = {}
 
- if vs_cull_sphere( bounds_c_world, obj.bounds.r ) then
+ if not shadow then
+ 	for i,ov in pairs(obj.vtx) do
+   scr_vtx[i] = transform_vert(ov)
+ 	end
 
-  vs_set_obj_mat( obj_to_world )
+  ldir = v3(0,1,0)
+  obj_ldir = v3_mul_m3( ldir, vs.world_to_obj_rot )
 
- 	scr_vtx = {}
+ else
+  for i,ov in pairs(obj.vtx) do
+   scr_vtx[i] = transform_vert_shadow(ov)
+  end   -- else code
+ end
 
-  if not shadow then
-  	for i,ov in pairs(obj.vtx) do
-    scr_vtx[i] = transform_vert(ov)
-  	end
-
-   ldir = v3(0,1,0)
-   obj_ldir = v3_mul_m3( ldir, vs.world_to_obj_rot )
-
-  else
-   for i,ov in pairs(obj.vtx) do
-    scr_vtx[i] = transform_vert_shadow(ov)
-   end   -- else code
-  end
-
-  for sv in all(scr_vtx) do
-   circ( sv.x, sv.y, 1.5, 4 )
-  end
+ --for sv in all(scr_vtx) do
+  --circ( sv.x, sv.y, 1.5, 4 )
+ --end
 
 
- 	for t in all(obj.tri) do
+	for t in all(obj.tri) do
 
-  a = scr_vtx[t[1]]
-  b = scr_vtx[t[2]]
-  c = scr_vtx[t[3]]
+ a = scr_vtx[t[1]]
+ b = scr_vtx[t[2]]
+ c = scr_vtx[t[3]]
 
-  -- backface cull
-  if v2_cross( v2_sub( b, a ), v2_sub( c, b ) ) < 0.0 then
-   if a.z > vs.near and b.z > vs.near and c.z > vs.near then
+ -- backface cull
+ if v2_cross( v2_sub( b, a ), v2_sub( c, b ) ) < 0.0 then
+  if a.z > vs.near and b.z > vs.near and c.z > vs.near then
 
-   local col, fp
+  local col, fp
 
-  if shadow then
-   fillp(0b0101101001011010.1)
-   gfx_tri_fill( a, b, c, 0 )
+ if shadow then
+  fillp(0b0101101001011010.1)
+  gfx_tri_fill( a, b, c, 0 )
 
-  else
-    ldotn = v3_dot(obj_ldir, t.n)
-    s = sat( ldotn * -0.5 + 0.5)
+ else
+   ldotn = v3_dot(obj_ldir, t.n)
+   s = sat( ldotn * -0.5 + 0.5)
 
-    local c1, c2
-    c1,c2,fp = gfx_dither( gradients[t.c], s )   
-    col = c1 + c2 * 16  
+   local c1, c2
+   c1,c2,fp = gfx_dither( gradients[t.c], s )   
+   col = c1 + c2 * 16  
 
-     local key = mid(a.z, b.z, c.z)
-     add( drawlist, { key=key, fn = dl_tri, value = {a=a, b=b, c=c, col=col, fp=fp } } )
-  end
+    local key = mid(a.z, b.z, c.z)
+    add( drawlist, { key=key, fn = dl_tri, value = {a=a, b=b, c=c, col=col, fp=fp } } )
+ end
 
-      --fillp( fp )
-      --gfx_tri_tex( a, b, c, t.t )
-      --gfx_tri_fill( a, b, c, col )         		
-   		--gfx_tri_bary( scr_vtx[t[1]], scr_vtx[t[2]], scr_vtx[t[3]], t.t )     
-   		--gfx_tri_wire( scr_vtx[t[1]], scr_vtx[t[2]], scr_vtx[t[3]] )
-     end
+     --fillp( fp )
+     --gfx_tri_tex( a, b, c, t.t )
+     --gfx_tri_fill( a, b, c, col )         		
+  		--gfx_tri_bary( scr_vtx[t[1]], scr_vtx[t[2]], scr_vtx[t[3]], t.t )     
+  		--gfx_tri_wire( scr_vtx[t[1]], scr_vtx[t[2]], scr_vtx[t[3]] )
     end
    end
-	end
+  end
+
+ dl_draw()
+ dl_reset()
+
 end
 
 
-function scene_draw( floor )
+-- scene
 
-   if ( floor) then 
-    draw_floor()
-    fillp()
+scene = {}
 
-    gfx_3d_grid(6)
+function scene_reset()
+ scene = {}
+end
+
+
+function scene_draw( bg )
+ if bg then
+  for item in all(scene) do
+   if bg then
+    if item.bg then item.draw(item.value, bg) end
    end
+  end
+ else
+  sortlist = {}
 
+  for k,v in pairs(scene) do
+   add(sortlist, {key=-v.key,sc_key=k})
+  end
+  
+  ce_heap_sort(sortlist)
+
+  for p in all(sortlist) do
+   item = scene[p.sc_key]
+   if item.fg then item.draw(item.value, bg) end
+  end
+ end
+end
+
+function scene_add_obj( obj, obj_to_world )
+ local t = obj_to_world.t
+ local rt = {}
+ rt.t = v3(t.x, t.y, t.z)
+ local r = obj_to_world.r
+ rt.r = { {r[1][1], r[1][2], r[1][3]}, {r[2][1], r[2][2], r[2][3]}, {r[3][1], r[3][2], r[3][3]} }
+
+ local bounds_c_world = rt_apply( obj.bounds.c, obj_to_world ) 
+ if vs_cull_sphere( bounds_c_world, obj.bounds.r ) then
+  vp = v3_sub(bounds_c_world, vs.cam_to_world.t)
+  cz = m3_get_az( vs.cam_to_world.r )
+  key = -v3_dot( vp, cz )
+  add( scene,
+  { 
+   key = key, 
+   draw = scene_draw_obj,
+   bg = true,
+   fg = true,   
+   value = {
+    obj = obj,
+    rt = rt
+   } 
+  } )
+ end
+end
+
+function scene_build()
+
+ scene_reset()
+
+ add( scene,
+ { 
+  key = -32767, 
+  draw = scene_draw_background,
+  bg = true,
+  fg = false,
+  value = {} 
+ } )
 
  local y_rot = sys_time.t * 1
  local x_rot = sys_time.t * 0.234
@@ -1096,12 +1165,11 @@ function scene_draw( floor )
     --gfx_3d_sprite( v3(-4,1,z), 0.5, 1, 40, 0, 8, 16 )
    --end
 
-
-   obj_draw( cube, obj_to_world, floor )
-
+   scene_add_obj( obj_cube, obj_to_world )
+ 
    for x=2,5 do
      obj_to_world.t.x = x * 4
-     obj_draw( cube, obj_to_world, floor )
+     scene_add_obj( obj_cube, obj_to_world )
    end    
 
 
@@ -1117,6 +1185,17 @@ function vgrad(y0, y1, i0, i1, g)
 
   s += ds_dy
  end
+end
+
+function scene_draw_background()
+  draw_floor()
+  fillp()
+
+  gfx_3d_grid(6)
+end
+
+function scene_draw_obj( scene_obj, bg )
+ obj_draw( scene_obj.obj, scene_obj.rt, bg )
 end
 
 function draw_floor()
@@ -1190,7 +1269,7 @@ if 0 == 0 then
  --rectfill(0,0,127,64, 1)
  --rectfill(0,128,127,64, 3)
 
-
+ scene_build()
 
  scene_draw( true )
  scene_draw( false )
@@ -1198,8 +1277,6 @@ if 0 == 0 then
    --gfx_3d_line( v3(0,0,0), v3(3, 0, 0), 4)
 
 end
-
- dl_draw()
 
 	perf_draw()
 end
