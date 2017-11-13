@@ -25,101 +25,101 @@ end
 -- vector2
 
 function v2(x,y)
- return {x=x,y=y}
+ return {x,y}
 end
 
 function v2_tostring(a)
- return "(" .. a.x .. "," .. a.y .. ")"
+ return "(" .. a[1] .. "," .. a[2] .. ")"
 end
 
 function v2_neg(a)
- return v2(-a.x, -a.y)
+ return v2(-a[1], -a[2])
 end
 
 function v2_rcp(a)
- return v2(1/a.x, 1/a.y)
+ return v2(1/a[1], 1/a[2])
 end
 
 function v2_add(a,b)
- return v2(a.x+b.x, a.y+b.y)
+ return v2(a[1]+b[1], a[2]+b[2])
 end
 
 function v2_add_s(a,b)
- return v2(a.x+b, a.y+b)
+ return v2(a[1]+b, a[2]+b)
 end
 
 function v2_sub(a,b)
- return v2(a.x-b.x, a.y-b.y)
+ return v2(a[1]-b[1], a[2]-b[2])
 end
 
 function v2_mul(a, b)
-	return v2( a.x * b.x, a.y * b.y )
+	return v2( a[1] * b[1], a[2] * b[2] )
 end
 
 function v2_mul_s(a, b)
-    return v2( a.x * b, a.y * b )
+    return v2( a[1] * b, a[2] * b )
 end
 
 function v2_cross(a,b)
-	return a.x*b.y-a.y*b.x
+	return a[1]*b[2]-a[2]*b[1]
 end
 
 -- vector3 
 
 function v3(x,y,z)
-	return {x=x,y=y,z=z}
+	return {x,y,z}
 end
 
 function v3_tostring(a)
-	return "(" .. a.x .. "," .. a.y .. "," .. a.z .. ")"
+	return "(" .. a[1] .. "," .. a[2] .. "," .. a[3] .. ")"
 end
 
 function v3_neg(a)
-	return v3(-a.x, -a.y, -a.z)
+	return v3(-a[1], -a[2], -a[3])
 end
 
 function v3_rcp(a)
- return v3(1/a.x, 1/a.y, 1/a.z)
+ return v3(1/a[1], 1/a[2], 1/a[3])
 end
 
 function v3_add(a,b)
-	return v3(a.x+b.x, a.y+b.y, a.z+b.z)
+	return v3(a[1]+b[1], a[2]+b[2], a[3]+b[3])
 end
 
 function v3_add_s(a,b)
-	return v3(a.x+b, a.y+b, a.z+b)
+	return v3(a[1]+b, a[2]+b, a[3]+b)
 end
 
 function v3_sub(a,b)
-	return v3(a.x-b.x, a.y-b.y, a.z-b.z)
+	return v3(a[1]-b[1], a[2]-b[2], a[3]-b[3])
 end
 
 function v3_sub_s(a,b)
-	return v3(a.x-b, a.y-b, a.z-b)
+	return v3(a[1]-b, a[2]-b, a[3]-b)
 end
 
 function v3_mul(a,b)
-	return v3(a.x*b.x,a.y*b.y,a.z*b.z)
+	return v3(a[1]*b[1],a[2]*b[2],a[3]*b[3])
 end
 
 function v3_mul_s(a, b)
-	return v3( a.x*b, a.y*b, a.z*b )
+	return v3( a[1]*b, a[2]*b, a[3]*b )
 end
 
 function v3_dot(a, b)
-	return a.x * b.x + a.y * b.y + a.z * b.z
+	return a[1] * b[1] + a[2] * b[2] + a[3] * b[3]
 end
 
 function v3_cross(a, b)
-	return v3( a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x )
+	return v3( a[2] * b[3] - a[3] * b[2], a[3] * b[1] - a[1] * b[3], a[1] * b[2] - a[2] * b[1] )
 end
 
 function v3_min(a,b)
-	return v3( min(a.x,b.x), min(a.y,b.y), min(a.z,b.z) )
+	return v3( min(a[1],b[1]), min(a[2],b[2]), min(a[3],b[3]) )
 end
 
 function v3_max(a,b)
-	return v3( max(a.x,b.x), max(a.y,b.y), max(a.z,b.z) )
+	return v3( max(a[1],b[1]), max(a[2],b[2]), max(a[3],b[3]) )
 end
 
 function v3_length(a)
@@ -133,18 +133,18 @@ end
 function v3_rot_x(a, t)
 	s = sin(t)
 	c = cos(t)
-	return v3( a.x, a.y * c + a.z * s, a.y * -s + a.z * c )	
+	return v3( a[1], a[2] * c + a[3] * s, a[2] * -s + a[3] * c )	
 end
 
 function v3_rot_y(a, t)
 	s = sin(t)
 	c = cos(t)
-	return v3( a.x * c + a.z * s, a.y, a.x * -s + a.z * c )	
+	return v3( a[1] * c + a[3] * s, a[2], a[1] * -s + a[3] * c )	
 end
 
 -- plane
 function pl(n,d)
- return { x=n.x, y=n.y, z=n.z, d=d }
+ return { n[1], n[2], n[3], d }
 end
 
 function pl_abc(a,b,c)
@@ -155,13 +155,13 @@ function pl_abc(a,b,c)
 end
 
 function pl_dist(p, v)
- return v3_dot(p,v) + p.d
+ return v3_dot(p,v) + p[4]
 end
 
 -- matrix
 
 function m3(x,y,z)
-	return {{x.x,x.y,x.z},{y.x,y.y,y.z},{z.x,z.y,z.z}}
+	return {{x[1],x[2],x[3]},{y[1],y[2],y[3]},{z[1],z[2],z[3]}}
 end	
 
 function m3_id()
@@ -224,9 +224,9 @@ function m3_trans(m)
 end
 
 function v3_mul_m3(v, m)
-	return v3( v.x * m[1][1] + v.y * m[1][2] + v.z * m[1][3],
-	 v.x * m[2][1] + v.y * m[2][2] + v.z * m[2][3],
-	 v.x * m[3][1] + v.y * m[3][2] + v.z * m[3][3] )
+	return v3( v[1] * m[1][1] + v[2] * m[1][2] + v[3] * m[1][3],
+	 v[1] * m[2][1] + v[2] * m[2][2] + v[3] * m[2][3],
+	 v[1] * m[3][1] + v[2] * m[3][2] + v[3] * m[3][3] )
 end
 
 -- rot-trans
@@ -325,10 +325,10 @@ function vs_frustum_setup()
  vs.frustum.planes = {}
 
  vcam = vs.cam_to_world.t
- vptl = v3(vs.vp.tl.x, vs.vp.tl.y, vs.pdist)
- vptr = v3(vs.vp.br.x, vs.vp.tl.y, vs.pdist)
- vpbr = v3(vs.vp.br.x, vs.vp.br.y, vs.pdist)
- vpbl = v3(vs.vp.tl.x, vs.vp.br.y, vs.pdist)
+ vptl = v3(vs.vp.tl[1], vs.vp.tl[2], vs.pdist)
+ vptr = v3(vs.vp.br[1], vs.vp.tl[2], vs.pdist)
+ vpbr = v3(vs.vp.br[1], vs.vp.br[2], vs.pdist)
+ vpbl = v3(vs.vp.tl[1], vs.vp.br[2], vs.pdist)
 
  vptl = rt_apply( vptl, vs.cam_to_world )
  vptr = rt_apply( vptr, vs.cam_to_world )
@@ -348,10 +348,10 @@ function vs_view_setup( cam_to_world, vp, pdist, win, sc )
  vs.win = win 
  if (sc == nil) vs.sc = win else vs.sc = sc
 
- vs.sct = vs.sc.tl.y
- vs.scb = vs.sc.br.y - 1
- vs.scl = vs.sc.tl.x
- vs.scr = vs.sc.br.x - 1
+ vs.sct = vs.sc.tl[2]
+ vs.scb = vs.sc.br[2] - 1
+ vs.scl = vs.sc.tl[1]
+ vs.scr = vs.sc.br[1] - 1
 
  vs.vp.size = v2_sub( vs.vp.br, vs.vp.tl )  
  vs.vp.rcp_size = v2_rcp( vs.vp.size ) 
@@ -377,9 +377,9 @@ end
 
 function vs_view_to_screen( v )
  -- project onto screen at distance vs.pdist in view space
- local w = 1. / v.z
+ local w = 1. / v[3]
  local ps = v2_add(v2_mul(v2_mul_s( v, vs.pdist * w ), vs.st_scale), vs.st_offset)
- return {x=ps.x, y = ps.y, z=v.z, w = w }
+ return {ps[1], ps[2], v[3], w }
 end
 
 function vs_screen_to_viewport( s )
@@ -417,17 +417,17 @@ end
 
 function dl_line(v)
    fillp()
-   line(v.a.x, v.a.y, v.b.x, v.b.y, v.col)
+   line(v.a[1], v.a[2], v.b[1], v.b[2], v.col)
 end   
 
 
 
 function gfx_line( a, b, col )
-  line(a.x, a.y, b.x, b.y, col)
+  line(a[1], a[2], b[1], b[2], col)
 end
 
 function gfx_point( a, col )
-  pset(a.x, b.x, col)
+  pset(a[1], a[2], col)
 end
 
 
@@ -435,19 +435,19 @@ function gfx_3d_line( a, b, col )
   local ac = rt_apply( a, vs.world_to_cam )
   local bc = rt_apply( b, vs.world_to_cam )
 
-  if ac.z < vs.near then
-   if bc.z < vs.near then
+  if ac[3] < vs.near then
+   if bc[3] < vs.near then
     return
    else
     -- clip a
     atob = v3_sub(bc, ac)
-    t = (vs.near - ac.z) / atob.z
+    t = (vs.near - ac[3]) / atob[3]
     ac = v3_add( ac, v3_mul_s( atob, t ) )
    end
-  elseif bc.z < vs.near then
+  elseif bc[3] < vs.near then
     -- clip b
     atob = v3_sub(bc, ac)
-    t = (vs.near - ac.z) / atob.z
+    t = (vs.near - ac[3]) / atob[3]
     bc = v3_add( ac, v3_mul_s( atob, t ) )
   end
 
@@ -480,16 +480,16 @@ function gfx_3d_sphere_outline( c, r, col )
 
   local p = get_projected_size( r, d )
    
-  local c2 = v3(c.x, c.y, c.z)
-  c2.x += p 
+  local c2 = v3(c[1], c[2], c[3])
+  c2[1] += p 
   local cp2 = vs_view_to_screen( c2 )
 
-  if ( p > 0 ) circ( cp.x, cp.y, cp2.x - cp.x, col )
+  if ( p > 0 ) circ( cp[1], cp[2], cp2[1] - cp[1], col )
 end 
 
 function gfx_3d_sprite( c, w, h, sx, sy, sw, sh )
   c = rt_apply( c, vs.world_to_cam )
-  if (c.z < vs.near ) return
+  if (c[3] < vs.near ) return
 
   d = v3_length(c)
 
@@ -501,20 +501,20 @@ function gfx_3d_sprite( c, w, h, sx, sy, sw, sh )
   cp1 = vs_view_to_screen( c1 )
   cp2 = vs_view_to_screen( c2 )
 
-  sspr( sx, sy, sw, sh, cp1.x, cp1.y, cp2.x - cp1.x, cp2.y - cp1.y )
+  sspr( sx, sy, sw, sh, cp1[1], cp1[2], cp2[1] - cp1[1], cp2[2] - cp1[2] )
 end 
   
 function gfx_3d_print(p, str, col)
   pw = rt_apply( p, vs.world_to_cam )
   pv = vs_view_to_screen( pw )
-  if (pv.z > vs.near) print(str, pv.x, pv.y, col )
+  if (pv[3] > vs.near) print(str, pv[1], pv[2], col )
 end
 
 
 function gfx_tri_wire( a, b, c )
-	line(a.x, a.y, b.x, b.y)
-	line(b.x, b.y, c.x, c.y)
-	line(c.x, c.y, a.x, a.y)
+	line(a[1], a[2], b[1], b[2])
+	line(b[1], b[2], c[1], c[2])
+	line(c[1], c[2], a[1], a[2])
 end
 
 function hline( xl, xr, y, col )
@@ -556,13 +556,13 @@ function hline( xl, xr, y, col )
 end
 
 function sort_y_3( a, b, c )
- if a.y > b.y then
+ if a[2] > b[2] then
   a,b = b,a
  end
 
- if b.y > c.y then
+ if b[2] > c[2] then
   b,c = c,b
-  if a.y > b.y then
+  if a[2] > b[2] then
    a,b = b,a
   end  
  end
@@ -575,18 +575,18 @@ function gfx_tri_fill( a, b, c, col )
  a,b,c = sort_y_3( a, b, c )
 
  -- ceil and clip y
- ayc = mid( ceil(a.y), vs.sct, vs.scb )
- byc = mid( ceil(b.y), vs.sct, vs.scb )
- cyc = mid( ceil(c.y), vs.sct, vs.scb )
+ ayc = mid( ceil(a[2]), vs.sct, vs.scb )
+ byc = mid( ceil(b[2]), vs.sct, vs.scb )
+ cyc = mid( ceil(c[2]), vs.sct, vs.scb )
 
  -- init edges
-	dabx_dy = (b.x - a.x) / (b.y - a.y)
-	dacx_dy = (c.x - a.x) / (c.y - a.y)
- dbcx_dy = (c.x - b.x) / (c.y - b.y)  
+	dabx_dy = (b[1] - a[1]) / (b[2] - a[2])
+	dacx_dy = (c[1] - a[1]) / (c[2] - a[2])
+ dbcx_dy = (c[1] - b[1]) / (c[2] - b[2])
 
-	ab_x = a.x + (ayc - a.y) * dabx_dy
-	ac_x = a.x + (ayc - a.y) * dacx_dy
- bc_x = b.x + (byc - b.y) * dbcx_dy
+	ab_x = a[1] + (ayc - a[2]) * dabx_dy
+	ac_x = a[1] + (ayc - a[2]) * dacx_dy
+ bc_x = b[1] + (byc - b[2]) * dbcx_dy
 
  byc-=1
 
@@ -606,201 +606,6 @@ function gfx_tri_fill( a, b, c, col )
 	end
 end
 
-function hline_tex( xl, xr, y, tex )
- --if y < vs.sc.tl.y or y >= vs.sc.br.y then return end
-
- if (xr.x < xl.x) xl,xr = xr,xl
- xlf = mid( flr(xl.x), vs.scl, vs.scr )
- xrf = mid( flr(xr.x), vs.scl, vs.scr )
-
- --x = xlf
- --w = xrf - xlf
-
- rdx = 1. / (xr.x - xl.x)
-
- dx_u = (xr.u - xl.u) * rdx
- dx_v = (xr.v - xl.v) * rdx
- dx_w = (xr.w - xl.w) * rdx
-
- ix = xlf - xl.x
- u = xl.u + ix * dx_u
- v = xl.v + ix * dx_v
- w = xl.w + ix * dx_w
-
- for x = xlf, xrf do
-  rw = 1 / w
-  --tu = ((u*rw) % tex.w) + tex.x
-  --tv = ((v*rw) % tex.h) + tex.y             
-  tu = u*rw + tex.x
-  tv = v*rw + tex.y             
-     pset(x,y, sget( tu, tv ) )
- u += dx_u
- v += dx_v
- w += dx_w
-
- end
- --hspan( xl, y, xr-xl, cc )
-
-end
-
-function gfx_tri_tex( a, b, c, tex )
- -- sort vertices
- a,b,c = sort_y_3( a, b, c )
-
- ayc = mid( ceil(a.y), vs.sct, vs.scb )
- byc = mid( ceil(b.y), vs.sct, vs.scb )
- cyc = mid( ceil(c.y), vs.sct, vs.scb )
-
- dab_dy_ry = 1. / (b.y - a.y)
- dab_dy_x = (b.x - a.x) * dab_dy_ry
- dab_dy_u = (b.u - a.u) * dab_dy_ry
- dab_dy_v = (b.v - a.v) * dab_dy_ry
- dab_dy_w = (b.w - a.w) * dab_dy_ry
-
- dac_dy_ry = 1. / (c.y - a.y)
- dac_dy_x = (c.x - a.x) * dac_dy_ry
- dac_dy_u = (c.u - a.u) * dac_dy_ry
- dac_dy_v = (c.v - a.v) * dac_dy_ry
- dac_dy_w = (c.w - a.w) * dac_dy_ry
-
- dbc_dy_ry = 1. / (c.y - b.y)
- dbc_dy_x = (c.x - b.x) * dbc_dy_ry  
- dbc_dy_u = (c.u - b.u) * dbc_dy_ry  
- dbc_dy_v = (c.v - b.v) * dbc_dy_ry  
- dbc_dy_w = (c.w - b.w) * dbc_dy_ry  
-
- ab = {}
- ab.x = a.x + (ayc - a.y) * dab_dy_x
- ab.u = a.u + (ayc - a.y) * dab_dy_u
- ab.v = a.v + (ayc - a.y) * dab_dy_v
- ab.w = a.w + (ayc - a.y) * dab_dy_w
-
- ac = {}
- ac.x = a.x + (ayc - a.y) * dac_dy_x
- ac.u = a.u + (ayc - a.y) * dac_dy_u
- ac.v = a.v + (ayc - a.y) * dac_dy_v
- ac.w = a.w + (ayc - a.y) * dac_dy_w
-
- bc = {}
- bc.x = b.x + (byc - b.y) * dbc_dy_x
- bc.u = b.u + (byc - b.y) * dbc_dy_u
- bc.v = b.v + (byc - b.y) * dbc_dy_v
- bc.w = b.w + (byc - b.y) * dbc_dy_w
-
- for py=ayc,byc-1 do
-  hline_tex( ab, ac, py, tex )
-  ab.x += dab_dy_x
-  ab.u += dab_dy_u
-  ab.v += dab_dy_v
-  ab.w += dab_dy_w
-
-  ac.x += dac_dy_x
-  ac.u += dac_dy_u
-  ac.v += dac_dy_v
-  ac.w += dac_dy_w
- end 
-
- for py=byc,cyc-1 do
-  hline_tex( bc, ac, py, tex )
-  bc.x += dbc_dy_x
-  bc.u += dbc_dy_u
-  bc.v += dbc_dy_v
-  bc.w += dbc_dy_w
-
-  ac.x += dac_dy_x
-  ac.u += dac_dy_u
-  ac.v += dac_dy_v
-  ac.w += dac_dy_w
- end
-end
-
-
-function edge_func(a, b, c)
-    return (b.x-a.x)*(c.y-a.y) - (b.y-a.y)*(c.x-a.x)
-end
-
-function gfx_tri_bary( a, b, c, tex )
-   // bounding box
-   minx = min3(a.x, b.x, c.x)
-   miny = min3(a.y, b.y, c.y)
-   maxx = max3(a.x, b.x, c.x)
-   maxy = max3(a.y, b.y, c.y)
-
-   minx = max(minx, 0)
-   miny = max(miny, 0)
-   maxx = min(maxx, 127)
-   maxy = min(maxy, 127)
-
-   p = v2(minx,miny)
-   b0_row = edge_func(b, c, p)
-   b1_row = edge_func(c, a, p)
-   b2_row = edge_func(a, b, p)
-
-   btot = b0_row + b1_row + b2_row
-
-   if ( btot <= 0 ) then return end
-
-   rb = 1 / btot
-
-   b0_row *= rb
-   b1_row *= rb
-   b2_row *= rb
-
-   db0_dx = (b.y - c.y) * rb
-   db1_dx = (c.y - a.y) * rb
-   db2_dx = (a.y - b.y) * rb
-
-   db0_dy = (c.x - b.x) * rb
-   db1_dy = (a.x - c.x) * rb
-   db2_dy = (b.x - a.x) * rb
-
-   u_row = b0_row * a.u + b1_row * b.u + b2_row * c.u
-   v_row = b0_row * a.v + b1_row * b.v + b2_row * c.v
-   w_row = b0_row * a.w + b1_row * b.w + b2_row * c.w
-
-   du_dx = db0_dx * a.u + db1_dx * b.u + db2_dx * c.u
-   dv_dx = db0_dx * a.v + db1_dx * b.v + db2_dx * c.v
-   dw_dx = db0_dx * a.w + db1_dx * b.w + db2_dx * c.w
-
-   du_dy = db0_dy * a.u + db1_dy * b.u + db2_dy * c.u
-   dv_dy = db0_dy * a.v + db1_dy * b.v + db2_dy * c.v
-   dw_dy = db0_dy * a.w + db1_dy * b.w + db2_dy * c.w
-
-	for y = miny,maxy do
-        b0 = b0_row
-        b1 = b1_row
-        b2 = b2_row
-        u = u_row
-        v = v_row
-        w = w_row
-        for x = minx,maxx do
-            if (b0 >= 0 and b1 >= 0 and b2 >= 0) then
-            	rw = 1 / w
-            	tu = ((u*rw) % tex.w) + tex.x
-            	tv = ((v*rw) % tex.h) + tex.y            	
-                pset(x,y, sget( tu, tv ) )
-
-                --pset(x,y, 15 )
-            end
-
-            b0 += db0_dx
-            b1 += db1_dx
-            b2 += db2_dx            
-
-	        u += du_dx
-    	    v += dv_dx
-    	    w += dw_dx
-		end
-
-        b0_row += db0_dy
-        b1_row += db1_dy
-        b2_row += db2_dy
-
-        u_row += du_dy
-	    v_row += dv_dy        
-	    w_row += dw_dy        
-	end
-end
 
 -- fillp dither patterns
 
@@ -930,8 +735,8 @@ function obj_calc_bounds(obj)
 
 	for v in all(obj.vtx) do
 		if fst == 1 then
-			vmin = v3(v.x, v.y, v.z)
-			vmax = v3(v.x, v.y, v.z)
+			vmin = v3(v[1], v[2], v[3])
+			vmax = v3(v[1], v[2], v[3])
 			fst = 0
 		else
 			vmin = v3_min( vmin, v )
@@ -950,16 +755,16 @@ end
 
 function obj_make_cube()
 	obj = {}
-	obj.vtx = {}
-
-	obj.vtx[1] = v3(-1, -1, -1)
-	obj.vtx[2] = v3(1, -1, -1)
-	obj.vtx[3] = v3(-1, 1, -1)
-	obj.vtx[4] = v3(1, 1, -1)
-	obj.vtx[5] = v3(1, -1, 1)
-	obj.vtx[6] = v3(-1, -1, 1)
-	obj.vtx[7] = v3(1, 1, 1)
-	obj.vtx[8] = v3(-1, 1, 1)
+	obj.vtx = {
+  v3(-1, -1, -1),
+  v3(1, -1, -1),
+  v3(-1, 1, -1),
+  v3(1, 1, -1),
+  v3(1, -1, 1),
+  v3(-1, -1, 1),
+  v3(1, 1, 1),
+  v3(-1, 1, 1),
+ }
 
 	obj.tri = { 
 		{ 1, 2, 3, c = 1 },
@@ -1096,8 +901,8 @@ end
 
 function transform_vert_shadow( ov )
    local vw = rt_apply( ov, vs.obj_to_world )   
-   vw.x += vw.y * 0.2
-   vw.y = 0
+   vw[1] += vw[2] * 0.2
+   vw[2] = 0
    return vs_view_to_screen( rt_apply( vw, vs.world_to_cam ) )
 end
 
@@ -1126,7 +931,7 @@ function obj_draw( obj, obj_to_world, shadow )
 
   -- backface cull
   if v2_cross( v2_sub( b, a ), v2_sub( c, b ) ) < 0.0 then
-   if a.z > vs.near and b.z > vs.near and c.z > vs.near then
+   if a[3] > vs.near and b[3] > vs.near and c[3] > vs.near then
 
     local col, fp
 
@@ -1144,7 +949,7 @@ function obj_draw( obj, obj_to_world, shadow )
       --fillp(fp)
       --gfx_tri_fill( a, b, c, col )
 
-      local key = (a.z + b.z + c.z) / 3
+      local key = (a[3] + b[3] + c[3]) / 3
       add( drawlist, { key=key, fn = dl_tri, value = {a=a, b=b, c=c, col=d.c, fp=d.f } } )
     end
    end
@@ -1154,12 +959,12 @@ function obj_draw( obj, obj_to_world, shadow )
  for l in all(obj.line) do
   local a = scr_vtx[l[1]]
   local b = scr_vtx[l[2]]
-  if a.z > vs.near and b.z > vs.near then
+  if a[3] > vs.near and b[3] > vs.near then
    if shadow then
     fillp(0b0101101001011010.1)
-    line(a.x, a.y, b.x, b.y, 0)
+    line(a[1], a[2], b[1], b[2], 0)
    else
-    local key = (a.z + b.z) / 2
+    local key = (a[3] + b[3]) / 2
     add( drawlist, { key=key, fn = dl_line, value = {a=a, b=b, col=l.c } } )
    end
   end
@@ -1222,7 +1027,7 @@ end
 function scene_add_obj( obj, obj_to_world )
  local t = obj_to_world.t
  local rt = {}
- rt.t = v3(t.x, t.y, t.z)
+ rt.t = v3(t[1], t[2], t[3])
  local r = obj_to_world.r
  rt.r = { {r[1][1], r[1][2], r[1][3]}, {r[2][1], r[2][2], r[2][3]}, {r[3][1], r[3][2], r[3][3]} }
 
@@ -1236,7 +1041,7 @@ function scene_add_obj( obj, obj_to_world )
     draw = scene_draw_obj,
     bg = true,
     fg = true,   
-    wp = v3(bwc.x, bwc.y, bwc.z),
+    wp = v3(bwc[1], bwc[2], bwc[3]),
     obj = obj,
     rt = rt
    } 
@@ -1256,7 +1061,7 @@ function scene_add_sprite( p, spr_def )
     draw = scene_draw_sprite,
     bg = false,
     fg = true,   
-    wp = v3(p.x, p.y, p.z),
+    wp = v3(p[1], p[2], p[3]),
     s = spr_def
    } 
   } )
@@ -1307,10 +1112,11 @@ function scene_build()
    end
 
    --scene_add_obj( obj_cube, obj_to_world )
-   scene_add_obj( obj_fox, obj_to_world )
+   --scene_add_obj( obj_fox, obj_to_world )
+   scene_add_obj( obj_torus, obj_to_world )
  
    for x=2,5 do
-     obj_to_world.t.x = x * 4
+     obj_to_world.t[1] = x * 4
      scene_add_obj( obj_cube, obj_to_world )
    end    
 
@@ -1348,32 +1154,75 @@ function draw_floor()
  local d = 1000
  local za = vs.cam_to_world.r[3]
  local z = v3(za[1],za[2],za[3])
- z.y = 0
+ z[2] = 0
  z = v3_normalize(z)
  pw = v3_add(v3_mul_s(z,d), vs.cam_to_world.t)
- pw.y = 0
+ pw[2] = 0
  
  local vv = rt_apply( pw, vs.world_to_cam )
  vv = vs_view_to_screen( vv )
 
- y = vv.y
+ y = vv[2]
  --if ( y <= 127 ) rectfill(0,0,127,y,1)
  --if ( y > 0 ) rectfill(0,y,127,127,3)
  --light = 0
  --vgrad(0,y, 0.6 + light * 0.3, 0.1 + light * 0.05 , 1 )
  --vgrad(y+1, 127, 0.1 + light * 0.05, 0.6+ light * 0.2, 2 )
 
- vcam = v3(0,0,0)
- vtop = v3(0,vs.vp.tl.y, vs.pdist )
- vbot = v3(0,vs.vp.br.y, vs.pdist )
+ local vcam = v3(0,0,0)
+ local vtop = v3(0,vs.vp.tl[2], vs.pdist )
+ local vbot = v3(0,vs.vp.br[2], vs.pdist )
+
+ vcam = rt_apply( vcam, vs.cam_to_world )
+ vtop = rt_apply( vtop, vs.cam_to_world )
+ vbot = rt_apply( vbot, vs.cam_to_world )
+
+ local fl_h = 0
+ local cam_h = vcam[2] - fl_h
+
+ local vtopd = v3_sub( vtop, vcam )
+ local vbotd = v3_sub( vbot, vcam )
+ local vtopd_y = vtopd[2]
+ local vbotd_y = vbotd[2]
+
+ vtopd_xz = sqrt( vtopd[1] * vtopd[1] + vtopd[3] * vtopd[3] )
+ vbotd_xz = sqrt( vbotd[1] * vbotd[1] + vbotd[3] * vbotd[3] )
+
+ -- y = ground y
+ -- z = ground intersect z
+ -- oy, oz = ray o
+ -- dy, dz = ray d
+
+ --(1) y = oy + dy * t
+ --(2) z = oz + dz * t
+
+ --(3) t = (y - oy) / dy 
+ --z = oz + dz * (y - oy) / dy
+
+ local d_y = vtopd_y
+ local d_xz = vtopd_xz
+ local d_y_dy = (vbotd_y - vtopd_y) / 128
+ local d_xz_dy = (vbotd_xz - vtopd_xz) / 128
 
  for y=0,127 do
-  c = 1
-  s = 0.5
+  t = cam_h / -d_y
+  local c = 2
+  local s = 1
+  if t > 0 then  
+   local xz = d_xz * t * s
+   c = 2
+   s = (1 - mid( 1 / xz, 0, 1)) * .2
+  else
+   c = 1
+   s = (1 - mid( d_y, 0, 1 )) * .8
+  end
   di = gfx_dither( c, s )
   fillp(di.f)
 
   rectfill(0,y,127,y,di.c)
+  
+  d_y += d_y_dy
+  d_xz += d_xz_dy
  end
 end
 
@@ -1395,20 +1244,20 @@ dl_reset()
 
    cam_move = v3(0,0,0)
       if (btn(4)) then
-       if ( btn(0))cam_move.x-=.1
-       if ( btn(1))cam_move.x+=.1
+       if ( btn(0) )cam_move[1]-=.1
+       if ( btn(1) )cam_move[1]+=.1
 
-       if ( btn(2))cam_move.z+=.1
-       if ( btn(3))cam_move.z-=.1
+       if ( btn(2) )cam_move[3]+=.1
+       if ( btn(3) )cam_move[3]-=.1
       else
-       if ( btn(0))cam_angles.y-=.01
-       if ( btn(1))cam_angles.y+=.01
+       if ( btn(0) )cam_angles[2]-=.01
+       if ( btn(1) )cam_angles[2]+=.01
 
-       if ( btn(2))cam_angles.x+=.01
-       if ( btn(3))cam_angles.x-=.01
+       if ( btn(2) )cam_angles[1]+=.01
+       if ( btn(3) )cam_angles[1]-=.01
       end
 
-   cam_m = m3_mul( m3_rot_y(cam_angles.y), m3_rot_x(cam_angles.x) )
+   cam_m = m3_mul( m3_rot_y(cam_angles[2]), m3_rot_x(cam_angles[1]) )
 
       cam_pos = v3_add( cam_pos, v3_mul_m3(cam_move, cam_m) )
 
