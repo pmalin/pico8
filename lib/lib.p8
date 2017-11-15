@@ -1,8 +1,9 @@
 pico-8 cartridge // http://www.pico-8.com
-version 12
+version 14
 __lua__
 
 dbg = 0
+perf = 1
 
 -- misc
 
@@ -20,6 +21,68 @@ end
 
 function max3(a,b,c)
  return max(a, max(b,c))
+end
+
+-- perf
+
+perf_counters = {}
+
+function perf_add_counter( key )
+ if (perf==0) return
+ perf_counters[key] = { name = key, total = 0, avg = 0 }
+end
+
+function perf_reset()
+ if (perf==0) return
+ for k,c in pairs(perf_counters) do
+  c.avg = c.avg * 0.95 + c.total * 0.05
+  c.total = 0
+  c.count = 0
+ end
+end
+
+function perf_timer()
+ return 1000 * stat(1) / 60
+end
+
+function perf_start( key )
+ if (perf==0) return
+ c = perf_counters[key]
+ if c then 
+  c.start = perf_timer()
+ end
+end
+
+function perf_end( key )
+ if (perf==0) return
+ c = perf_counters[key]
+ if c then 
+  c.total += perf_timer() - c.start
+  c.count += 1
+  c.start = nil 
+ end
+end
+
+function perf_draw_timers()
+ if (perf==0) return
+ cursor(0,0)
+ color(7)
+ for k,c in pairs(perf_counters) do
+  print(c.name .. "[" .. c.count .. "]=" .. (c.total) .. ",".. c.avg)
+ end
+end
+
+function perf_draw()
+ clip()
+ local cpu=flr(stat(1)*100)
+ local fps=sys_time.b/ceil(stat(1))
+ local mem=flr(stat(0))
+ local perf=
+  cpu .. "% cpu @ " ..
+  fps ..  " fps " ..
+  mem .. " mb"
+ print(perf,0,122,0)
+ print(perf,0,121,fps==sys_time.b and 7 or 8)
 end
 
 -- vector2
@@ -131,14 +194,14 @@ function v3_normalize(a)
 end
 
 function v3_rot_x(a, t)
-	s = sin(t)
-	c = cos(t)
+	local s = sin(t)
+	local c = cos(t)
 	return v3( a[1], a[2] * c + a[3] * s, a[2] * -s + a[3] * c )	
 end
 
 function v3_rot_y(a, t)
-	s = sin(t)
-	c = cos(t)
+	local s = sin(t)
+	local c = cos(t)
 	return v3( a[1] * c + a[3] * s, a[2], a[1] * -s + a[3] * c )	
 end
 
@@ -180,20 +243,20 @@ function m3_get_az(m)
 end
 
 function m3_rot_x(t)
-	s = sin(t)
-	c = cos(t)
+	local s = sin(t)
+	local c = cos(t)
 	return m3(v3(1, 0, 0), v3(0, c,  s), v3(0,  -s,  c))
 end
 
 function m3_rot_y(t)
-	s = sin(t)
-	c = cos(t)
+	local s = sin(t)
+	local c = cos(t)
 	return m3(v3(c, 0, -s), v3(0,  1,  0), v3(s,  0,  c))
 end
 
 function m3_rot_z(t)
-	s = sin(t)
-	c = cos(t)
+	local s = sin(t)
+	local c = cos(t)
 	return m3(v3(c, -s, 0), v3(s,  c, 0), v3(0,  0, 1))
 end
 
@@ -308,7 +371,9 @@ end
 -- view state
 
 function vs_cull_sphere( o, r )
- for p in all(vs.frustum.planes) do
+ local pc = #vs.frustum.planes
+ for pi=1,pc do
+  local p=vs.frustum.planes[pi]
   if (pl_dist(p,o) < -r) then
    --gfx_3d_sphere_outline( o, r * 2, 8 )
    return false
@@ -379,6 +444,7 @@ function vs_view_to_screen( v )
  -- project onto screen at distance vs.pdist in view space
  local w = 1. / v[3]
  local ps = v2_add(v2_mul(v2_mul_s( v, vs.pdist * w ), vs.st_scale), vs.st_offset)
+ ps.w = w
  return {ps[1], ps[2], v[3], w }
 end
 
@@ -397,13 +463,17 @@ end
 function dl_draw()
  sortlist = {}
 
- for k,v in pairs(drawlist) do
-  add(sortlist, {key=-v.key,dl_key=k})
+ --for k,v in pairs(drawlist) do
+ for i=1,#drawlist do
+  local v = drawlist[i]
+  add(sortlist, {key=-v.key,dl_key=i})
  end
  
  ce_heap_sort(sortlist)
 
- for p in all(sortlist) do
+ slc = #sortlist
+ for i=1,slc do
+  p = sortlist[i]
   item = drawlist[p.dl_key]
   item.fn( item.value )
  end
@@ -680,6 +750,16 @@ obj_fox = {}
 sys_time = { t=0, dt=1/60, b=60 }
 
 function _init()
+ perf_add_counter( "bg" )
+ perf_add_counter( "draw" )
+ perf_add_counter( "update" )
+ perf_add_counter( "vert" )
+ perf_add_counter( "tri" )
+ perf_add_counter( "shadow" )
+ perf_add_counter( "drawlist" )
+ 
+ perf_reset()
+
 	obj_cube = obj_make_cube()
  obj_torus = obj_make_torus()
  obj_fox = obj_make_fox()
@@ -687,8 +767,10 @@ function _init()
 end
 
 function update(dt)
+ perf_start("update")
  sys_time.dt = dt
  sys_time.t += dt
+ perf_end("update")
 end
 
 
@@ -702,18 +784,6 @@ end
 -- update(1/sys_time.b)
 --end
 
-function perf_draw()
- clip()
- local cpu=flr(stat(1)*100)
- local fps=sys_time.b/ceil(stat(1))
- local mem=flr(stat(0))
- local perf=
-  cpu .. "% cpu @ " ..
-  fps ..  " fps " ..
-  mem .. " mb"
- print(perf,0,122,0)
- print(perf,0,121,fps==sys_time.b and 7 or 8)
-end
 
 function obj_calc_normals()
 	for t in all(obj.tri) do
@@ -859,8 +929,8 @@ function obj_make_torus()
  r0 = 0.75
  r1 = .5
 
- sweepsteps = 6
- steps = 6
+ sweepsteps = 10
+ steps = 8
 
  obj = {}
  obj.vtx = {}
@@ -892,7 +962,7 @@ function obj_make_torus()
   end
  end  
 
- obj.line = {}
+ obj.lin = {}
  
  obj_finalize(obj)
 
@@ -911,67 +981,100 @@ function obj_draw( obj, obj_to_world, shadow )
 
 	local scr_vtx = {}
 
+ perf_start("vert")
  if not shadow then
- 	for i,ov in pairs(obj.vtx) do
-   scr_vtx[i] = vs_view_to_screen( rt_apply( ov, vs.obj_to_cam ) )
+  local vc = #obj.vtx
+ 	for vi=1,vc do
+ 	 scr_vtx[vi] = vs_view_to_screen( rt_apply( obj.vtx[vi], vs.obj_to_cam ) )
  	end
 
   ldir = v3(0,1,0)
   obj_ldir = v3_mul_m3( ldir, vs.world_to_obj_rot )
  else
-  for i,ov in pairs(obj.vtx) do
-   scr_vtx[i] = transform_vert_shadow(ov)
+  local vc = #obj.vtx
+ 	for vi=1,vc do
+   scr_vtx[vi] = transform_vert_shadow(obj.vtx[vi])
   end
  end
 
-	for t in all(obj.tri) do
-  local a = scr_vtx[t[1]]
-  local b = scr_vtx[t[2]]
-  local c = scr_vtx[t[3]]
+ perf_end("vert")
 
-  -- backface cull
-  if v2_cross( v2_sub( b, a ), v2_sub( c, b ) ) < 0.0 then
+
+ local tc = #obj.tri
+
+ if not shadow then
+  perf_start("tri")
+  for ti=1,tc do
+   local t=obj.tri[ti]
+   local a = scr_vtx[t[1]]
+   local b = scr_vtx[t[2]]
+   local c = scr_vtx[t[3]]
+
+   -- backface cull
+   if v2_cross( v2_sub( b, a ), v2_sub( c, b ) ) < 0.0 then
+    if a[3] > vs.near and b[3] > vs.near and c[3] > vs.near then
+
+     local col, fp
+
+     local ldotn = v3_dot(obj_ldir, t.n)
+     local s = sat( ldotn * -0.5 + 0.5)
+     local d = gfx_dither( t.c, s )  
+
+     local key = (a[3] + b[3] + c[3]) / 3
+     add( drawlist, { key=key, fn = dl_tri, value = {a=a, b=b, c=c, col=d.c, fp=d.f } } )
+     --fillp(d.f)
+     --gfx_tri_fill( a, b, c, d.c )
+   end
+   end
+  end
+  perf_end("tri")
+
+ else
+  perf_start("shadow")
+  
+  fillp(0b0101101001011010.1)
+  for ti=1,tc do
+   local t=obj.tri[ti]
+   local a = scr_vtx[t[1]]
+   local b = scr_vtx[t[2]]
+   local c = scr_vtx[t[3]]
+
+   -- near cull
    if a[3] > vs.near and b[3] > vs.near and c[3] > vs.near then
+    -- backface cull
+    if v2_cross( v2_sub( b, a ), v2_sub( c, b ) ) < 0.0 then
+     gfx_tri_fill( a, b, c, 0 )
+    end
+   end
+  end
+  perf_end("shadow")
 
-    local col, fp
+ end
 
+ if obj.lin then
+  local lc = #obj.lin
+  for li=1,lc do
+   local l=obj.lin[li]
+   local a = scr_vtx[l[1]]
+   local b = scr_vtx[l[2]]
+   if a[3] > vs.near and b[3] > vs.near then
     if shadow then
      fillp(0b0101101001011010.1)
-     gfx_tri_fill( a, b, c, 0 )
-
+     line(a[1], a[2], b[1], b[2], 0)
     else
-      ldotn = v3_dot(obj_ldir, t.n)
-      s = sat( ldotn * -0.5 + 0.5)
-
-      local c1, c2
-      d = gfx_dither( t.c, s )          
-
-      --fillp(fp)
-      --gfx_tri_fill( a, b, c, col )
-
-      local key = (a[3] + b[3] + c[3]) / 3
-      add( drawlist, { key=key, fn = dl_tri, value = {a=a, b=b, c=c, col=d.c, fp=d.f } } )
+     local key = (a[3] + b[3]) / 2
+     add( drawlist, { key=key, fn = dl_line, value = {a=a, b=b, col=l.c } } )
     end
    end
   end
  end
 
- for l in all(obj.line) do
-  local a = scr_vtx[l[1]]
-  local b = scr_vtx[l[2]]
-  if a[3] > vs.near and b[3] > vs.near then
-   if shadow then
-    fillp(0b0101101001011010.1)
-    line(a[1], a[2], b[1], b[2], 0)
-   else
-    local key = (a[3] + b[3]) / 2
-    add( drawlist, { key=key, fn = dl_line, value = {a=a, b=b, col=l.c } } )
-   end
-  end
- end
+ perf_start("drawlist")
 
  dl_draw()
  dl_reset()
+ perf_end("drawlist")
+
 end
 
 
@@ -992,7 +1095,7 @@ function scene_draw( bg )
    end
   end
  else
-  sortlist = {}
+  local sortlist = {}
 
   for k,v in pairs(scene) do
    add(sortlist, {key=-v.key,sc_key=k})
@@ -1001,25 +1104,25 @@ function scene_draw( bg )
   ce_heap_sort(sortlist)
 
   for p in all(sortlist) do
-   item = scene[p.sc_key]
+   local item = scene[p.sc_key]
    if item.value.fg then 
     item.value.draw(item.value, bg) 
    end
   end
 
   if not (band(dbg,1) == 0) then
-   for item in all(scene) do
-     str = "key:" .. item.key
-     gfx_3d_print(item.value.wp, str, 7)
+   local ic = #scene
+   for ii=1,ic do
+    local item = scene[ii]
+    local str = "key:" .. item.key
+    gfx_3d_print(item.value.wp, str, 7)
    end
   end
-
-
  end 
 end
 
 function scene_key(wp)
-  vp = v3_sub(wp, vs.cam_to_world.t)  
+  local vp = v3_sub(wp, vs.cam_to_world.t)  
   return v3_dot( vp, vs.cam_z )
 end  
 
@@ -1033,7 +1136,7 @@ function scene_add_obj( obj, obj_to_world )
 
  local bwc = rt_apply( obj.bounds.c, obj_to_world ) 
  if vs_cull_sphere( bwc, obj.bounds.r ) then
-  key = scene_key(bwc)
+  local key = scene_key(bwc)
   add( scene,
   { 
    key = key, 
@@ -1050,9 +1153,9 @@ function scene_add_obj( obj, obj_to_world )
 end
 
 function scene_add_sprite( p, spr_def )
- max_r = max( spr_def.w, spr_def.h )
+ local max_r = max( spr_def.w, spr_def.h )
  if vs_cull_sphere( p, max_r ) then
-  key = scene_key(p)
+  local key = scene_key(p)
   
   add( scene,
   { 
@@ -1136,10 +1239,12 @@ function vgrad(y0, y1, i0, i1, g)
 end
 
 function scene_draw_background()
+  perf_start("bg")
   draw_floor()
   fillp()
 
   gfx_3d_grid(6)
+  perf_end("bg")
 end
 
 function scene_draw_obj( scene_obj, bg )
@@ -1230,6 +1335,8 @@ cam_pos = v3(0,1,-10)
 cam_angles = v3(0,0,0)
 
 function _draw()
+  perf_reset()
+  perf_start("draw")
 
 	--cls()
 
@@ -1289,10 +1396,12 @@ if 0 == 0 then
  --gfx_3d_print(v3(0, 4, 0), "hello", 7)
 
    --gfx_3d_line( v3(0,0,0), v3(3, 0, 0), 4)
-
 end
 
+ perf_end("draw")
+
 	perf_draw()
+ perf_draw_timers()
 end
 
 __gfx__
