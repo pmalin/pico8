@@ -3,7 +3,7 @@ version 14
 __lua__
 
 dbg = 0
-perf = 1
+perf = 0
 
 -- misc
 
@@ -295,7 +295,13 @@ end
 -- rot-trans
 
 function rt_apply(v, rt)
-	return v3_add( v3_mul_m3(v,rt.r), rt.t)
+	--return v3_add( v3_mul_m3(v,rt.r), rt.t)
+ local r = rt.r
+ local t = rt.t
+ return v3( t[1] + v[1] * r[1][1] + v[2] * r[1][2] + v[3] * r[1][3],
+  t[2] + v[1] * r[2][1] + v[2] * r[2][2] + v[3] * r[2][3],
+  t[3] + v[1] * r[3][1] + v[2] * r[3][2] + v[3] * r[3][3] )
+
 end
 
 function rt_mul(rta, rtb)
@@ -761,7 +767,7 @@ function _init()
  perf_reset()
 
 	obj_cube = obj_make_cube()
- obj_torus = obj_make_torus()
+ obj_torus = obj_make_torus(0.75,0.5, 6, 6)
  obj_fox = obj_make_fox()
  init_dither()
 end
@@ -925,13 +931,7 @@ obj.vtx[19] = v3(1.719373,1.274788,1.22807)
 end
 
 
-function obj_make_torus()
- r0 = 0.75
- r1 = .5
-
- sweepsteps = 10
- steps = 8
-
+function obj_make_torus(r0, r1, sweepsteps, steps)
  obj = {}
  obj.vtx = {}
  
