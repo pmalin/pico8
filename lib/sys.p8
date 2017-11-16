@@ -29,11 +29,18 @@ function max3(a,b,c)
  return max(a, max(b,c))
 end
 
-sys_time = { t=0, dt=1/60, b=60 }
+function sys_get_framrate()
+ if _update60 then 
+  return 60
+ end
+  return 30
+end
 
-function sys_time_tick(framerate)
- sys_time.b=framerate
- sys_time.dt=1/framerate
+sys_time = { t=0, dt=1/60, fr=60 }
+
+function sys_time_tick()
+ sys_time.fr = sys_get_framrate()
+ sys_time.dt=1/sys_time.fr
  sys_time.t+=sys_time.dt
 end
 
@@ -87,17 +94,18 @@ end
 function perf_hud()
  clip()
  local cpu=flr(stat(1)*100)
- local fps=sys_time.b/ceil(stat(1))
+ local fps=sys_time.fr/ceil(stat(1))
  local mem=flr(stat(0))
  local perf=
   cpu .. "% cpu @ " ..
   fps ..  " fps " ..
   mem .. " mb"
  print(perf,0,122,0)
- print(perf,0,121,fps==sys_time.b and 7 or 8)
+ print(perf,0,121,fps==sys_time.fr and 7 or 8)
 
  perf_draw_timers()
 end
+
 
 function _init()
  perf_counter( "test" )
