@@ -538,7 +538,10 @@ end
 
 function dl_tri(v)
    fillp(v.fp)
-   trifill( v.a, v.b, v.c, v.col )
+   local a=v.a
+   local b=v.b
+   local c=v.c
+   trifill( a[1],a[2], b[1],b[2], c[1],c[2], v.col )
 end   
 
 function dl_line(v)
@@ -681,38 +684,38 @@ function hline( xl, xr, y, col )
 	end	
 end
 
-function sort_y_3( a, b, c )
- if a[2] > b[2] then
-  a,b = b,a
+function sort_y_3( ax,ay, bx,by, cx,cy )
+ if ay > by then
+  ax,ay,bx,by = bx,by,ax,ay
  end
 
- if b[2] > c[2] then
-  b,c = c,b
-  if a[2] > b[2] then
-   a,b = b,a
+ if by > cy then
+  bx,by,cx,cy = cx,cy,bx,by
+  if ay > by then
+   ax,ay,bx,by = bx,by,ax,ay
   end  
  end
- return a,b,c
+ return ax,ay, bx,by, cx,cy
 end
 
-function trifill( a, b, c, col )
+function trifill( ax,ay, bx,by, cx,cy, col )
 
 	-- sort vertices
- a,b,c = sort_y_3( a, b, c )
+ ax,ay,bx,by,cx,cy = sort_y_3( ax,ay, bx,by, cx,cy )
 
  -- ceil and clip y
- ayc = mid( ceil(a[2]), vs.sct, vs.scb )
- byc = mid( ceil(b[2]), vs.sct, vs.scb )
- cyc = mid( ceil(c[2]), vs.sct, vs.scb )
+ ayc = mid( ceil(ay), vs.sct, vs.scb )
+ byc = mid( ceil(by), vs.sct, vs.scb )
+ cyc = mid( ceil(cy), vs.sct, vs.scb )
 
  -- init edges
-	dabx_dy = (b[1] - a[1]) / (b[2] - a[2])
-	dacx_dy = (c[1] - a[1]) / (c[2] - a[2])
- dbcx_dy = (c[1] - b[1]) / (c[2] - b[2])
+	dabx_dy = (bx - ax) / (by - ay)
+	dacx_dy = (cx - ax) / (cy - ay)
+ dbcx_dy = (cx - bx) / (cy - by)
 
-	ab_x = a[1] + (ayc - a[2]) * dabx_dy
-	ac_x = a[1] + (ayc - a[2]) * dacx_dy
- bc_x = b[1] + (byc - b[2]) * dbcx_dy
+	ab_x = ax + (ayc - ay) * dabx_dy
+	ac_x = ax + (ayc - ay) * dacx_dy
+ bc_x = bx + (byc - by) * dbcx_dy
 
  byc-=1
 
@@ -1114,7 +1117,7 @@ function obj_draw( obj, obj_to_world, shadow )
    if a[3] > vs.near and b[3] > vs.near and c[3] > vs.near then
     -- backface cull
     if v2_cross( v2_sub( b, a ), v2_sub( c, b ) ) < 0.0 then
-     trifill( a, b, c, 0 )
+     trifill( a[1],a[2], b[1],b[2], c[1],c[2], 0 )
     end
    end
   end
