@@ -168,15 +168,15 @@ end
 function m3_mul(a11,a12,a13, a21,a22,a23, a31,a32,a33, b11,b12,b13, b21,b22,b23, b31,b32,b33)
  -- aik * bkj + aik * bkj + aik * bkj
  return 
-  a11 * b11 + ai2 * b21 + a13 * b31,
-  a11 * b12 + ai2 * b22 + a13 * b32,
-  a11 * b13 + ai2 * b23 + a13 * b33,
-  a21 * b11 + ai2 * b21 + a23 * b31,
-  a21 * b12 + ai2 * b22 + a23 * b32,
-  a21 * b13 + ai2 * b23 + a23 * b33,
-  a31 * b11 + ai2 * b21 + a33 * b31,
-  a31 * b12 + ai2 * b22 + a33 * b32,
-  a31 * b13 + ai2 * b23 + a33 * b33
+  a11 * b11 + a12 * b21 + a13 * b31,
+  a11 * b12 + a12 * b22 + a13 * b32,
+  a11 * b13 + a12 * b23 + a13 * b33,
+  a21 * b11 + a22 * b21 + a23 * b31,
+  a21 * b12 + a22 * b22 + a23 * b32,
+  a21 * b13 + a22 * b23 + a23 * b33,
+  a31 * b11 + a32 * b21 + a33 * b31,
+  a31 * b12 + a32 * b22 + a33 * b32,
+  a31 * b13 + a32 * b23 + a33 * b33
 end 
 
 function m3_trans(m11,m12,m13, m21,m22,m23, m31,m32,m33)
@@ -318,7 +318,8 @@ function _init()
 
  local ax,ay,az = 4,6,9
  local bx,by,bz = 2,3,4
- local vx,vy,vz = v3_add_s( v3_mul(ax,ay,az,bx,by,bz), 3. )
+ local vx,vy,vz = v3_mul(ax,ay,az,bx,by,bz)
+ vx,vy,vz = v3_add_s(vx,vy,vz, 3. )
 
 
 end

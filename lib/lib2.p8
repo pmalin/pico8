@@ -32,6 +32,13 @@ function max3(a,b,c)
  return max(a, max(b,c))
 end
 
+function unpack(t, i)
+ i = i or 1
+ if t[i] ~= nil then
+  return t[i], unpack(t, i + 1)
+ end
+end
+
 sys_time = { t=0, dt=1/60, b=60 }
 
 function sys_time_tick(framerate)
@@ -268,15 +275,15 @@ end
 function m3_mul(a11,a12,a13, a21,a22,a23, a31,a32,a33, b11,b12,b13, b21,b22,b23, b31,b32,b33)
  -- aik * bkj + aik * bkj + aik * bkj
  return 
-  a11 * b11 + ai2 * b21 + a13 * b31,
-  a11 * b12 + ai2 * b22 + a13 * b32,
-  a11 * b13 + ai2 * b23 + a13 * b33,
-  a21 * b11 + ai2 * b21 + a23 * b31,
-  a21 * b12 + ai2 * b22 + a23 * b32,
-  a21 * b13 + ai2 * b23 + a23 * b33,
-  a31 * b11 + ai2 * b21 + a33 * b31,
-  a31 * b12 + ai2 * b22 + a33 * b32,
-  a31 * b13 + ai2 * b23 + a33 * b33
+  a11 * b11 + a12 * b21 + a13 * b31,
+  a11 * b12 + a12 * b22 + a13 * b32,
+  a11 * b13 + a12 * b23 + a13 * b33,
+  a21 * b11 + a22 * b21 + a23 * b31,
+  a21 * b12 + a22 * b22 + a23 * b32,
+  a21 * b13 + a22 * b23 + a23 * b33,
+  a31 * b11 + a32 * b21 + a33 * b31,
+  a31 * b12 + a32 * b22 + a33 * b32,
+  a31 * b13 + a32 * b23 + a33 * b33
 end 
 
 function m3_trans(m11,m12,m13, m21,m22,m23, m31,m32,m33)
@@ -773,7 +780,7 @@ function _init()
 end
 
 function update(dt)
- perf_start("update")
+ perf_begin("update")
  sys_time.dt = dt
  sys_time.t += dt
  perf_end("update")
@@ -825,7 +832,8 @@ function obj_calc_bounds(obj)
 		end					
 	end
 
-	obj.bounds.c = { v3_mul_s( v3_add( vminx,vminy,vminz, vmaxx,vmaxy,vmaxz ), .5 ) }
+ local x,y,z = v3_add( vminx,vminy,vminz, vmaxx,vmaxy,vmaxz )
+	obj.bounds.c = { v3_mul_s( x,y,z, .5 ) }
 	obj.bounds.r = { v3_length( v3_sub( vmaxx,vmaxy,vmaxz, vminx,vminy,vminz ) ) * .5 }
 end
 
@@ -943,13 +951,15 @@ function obj_make_torus(r0, r1, sweepsteps, steps)
  
  for step=0,steps-1 do
   stept = step / steps
-  v = v3(0, sin(stept) * r1, cos(stept) * r1 + r0)
+  local vy = sin(stept) * r1
+  local vz = cos(stept) * r1 + r0
 
   for sweep=0,sweepsteps-1 do
    sweept = sweep / sweepsteps
 
    idx = step * sweepsteps + sweep + 1
-   obj.vtx[idx] = v3_rot_y(v, sweept)
+
+   obj.vtx[idx] = { sin(sweept) * vz, vy, cos(sweept) * vz }
   end
  end
 
@@ -987,7 +997,7 @@ function obj_draw( obj, obj_to_world, shadow )
 
 	local scr_vtx = {}
 
- perf_start("vert")
+ perf_begin("vert")
  if not shadow then
   local vc = #obj.vtx
  	for vi=1,vc do
@@ -1009,7 +1019,7 @@ function obj_draw( obj, obj_to_world, shadow )
  local tc = #obj.tri
 
  if not shadow then
-  perf_start("tri")
+  perf_begin("tri")
   for ti=1,tc do
    local t=obj.tri[ti]
    local a = scr_vtx[t[1]]
@@ -1036,7 +1046,7 @@ function obj_draw( obj, obj_to_world, shadow )
   perf_end("tri")
 
  else
-  perf_start("shadow")
+  perf_begin("shadow")
   
   fillp(0b0101101001011010.1)
   for ti=1,tc do
@@ -1075,7 +1085,7 @@ function obj_draw( obj, obj_to_world, shadow )
   end
  end
 
- perf_start("drawlist")
+ perf_begin("drawlist")
 
  dl_draw()
  dl_reset()
@@ -1245,7 +1255,7 @@ function vgrad(y0, y1, i0, i1, g)
 end
 
 function scene_draw_background()
-  perf_start("bg")
+  perf_begin("bg")
   draw_floor()
   fillp()
 
@@ -1342,7 +1352,7 @@ cam_angles = {0,0,0}
 
 function _draw()
   perf_reset()
-  perf_start("draw")
+  perf_begin("draw")
 
 	--cls()
 
@@ -1355,7 +1365,7 @@ function _draw()
 dl_reset()
 
 
-   cam_move = v3(0,0,0)
+   local cam_move = {0,0,0}
       if (btn(4)) then
        if ( btn(0) )cam_move[1]-=.1
        if ( btn(1) )cam_move[1]+=.1
@@ -1370,7 +1380,12 @@ dl_reset()
        if ( btn(3) )cam_angles[1]-=.01
       end
 
-   cam_m = m3_mul( m3_rot_y(cam_angles[2]), m3_rot_x(cam_angles[1]) )
+   
+   local a11,a12,a13, a21,a22,a23, a31,a32,a33 =
+      m3_rot_y(cam_angles[2])
+      local b11,b12,b13, b21,b22,b23, b31,b32,b33
+      m3_rot_x(cam_angles[1])
+      cam_m = m3_mul( a11,a12,a13, a21,a22,a23, a31,a32,a33,  b11,b12,b13, b21,b22,b23, b31,b32,b33 )
 
       cam_pos = v3_add( cam_pos, v3_mul_m3(cam_move, cam_m) )
 

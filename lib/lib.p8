@@ -3,7 +3,13 @@ version 14
 __lua__
 
 dbg = 0
-perf = 0
+perf = true
+
+perf_counters = {}
+
+----------------------
+-- system
+----------------------
 
 -- misc
 
@@ -23,17 +29,23 @@ function max3(a,b,c)
  return max(a, max(b,c))
 end
 
+sys_time = { t=0, dt=1/60, b=60 }
+
+function sys_time_tick(framerate)
+ sys_time.b=framerate
+ sys_time.dt=1/framerate
+ sys_time.t+=sys_time.dt
+end
+
 -- perf
 
-perf_counters = {}
-
-function perf_add_counter( key )
- if (perf==0) return
+function perf_counter( key )
+ if (not perf) return
  perf_counters[key] = { name = key, total = 0, avg = 0 }
 end
 
 function perf_reset()
- if (perf==0) return
+ if (not perf) return
  for k,c in pairs(perf_counters) do
   c.avg = c.avg * 0.95 + c.total * 0.05
   c.total = 0
@@ -45,8 +57,8 @@ function perf_timer()
  return 1000 * stat(1) / 60
 end
 
-function perf_start( key )
- if (perf==0) return
+function perf_begin( key )
+ if (not perf) return
  c = perf_counters[key]
  if c then 
   c.start = perf_timer()
@@ -54,7 +66,7 @@ function perf_start( key )
 end
 
 function perf_end( key )
- if (perf==0) return
+ if (not perf) return
  c = perf_counters[key]
  if c then 
   c.total += perf_timer() - c.start
@@ -64,7 +76,7 @@ function perf_end( key )
 end
 
 function perf_draw_timers()
- if (perf==0) return
+ if (not perf) return
  cursor(0,0)
  color(7)
  for k,c in pairs(perf_counters) do
@@ -72,7 +84,7 @@ function perf_draw_timers()
  end
 end
 
-function perf_draw()
+function perf_hud()
  clip()
  local cpu=flr(stat(1)*100)
  local fps=sys_time.b/ceil(stat(1))
@@ -83,6 +95,8 @@ function perf_draw()
   mem .. " mb"
  print(perf,0,122,0)
  print(perf,0,121,fps==sys_time.b and 7 or 8)
+
+ perf_draw_timers()
 end
 
 -- vector2
@@ -756,13 +770,13 @@ obj_fox = {}
 sys_time = { t=0, dt=1/60, b=60 }
 
 function _init()
- perf_add_counter( "bg" )
- perf_add_counter( "draw" )
- perf_add_counter( "update" )
- perf_add_counter( "vert" )
- perf_add_counter( "tri" )
- perf_add_counter( "shadow" )
- perf_add_counter( "drawlist" )
+ perf_counter( "bg" )
+ perf_counter( "draw" )
+ perf_counter( "update" )
+ perf_counter( "vert" )
+ perf_counter( "tri" )
+ perf_counter( "shadow" )
+ perf_counter( "drawlist" )
  
  perf_reset()
 
@@ -773,7 +787,7 @@ function _init()
 end
 
 function update(dt)
- perf_start("update")
+ perf_begin("update")
  sys_time.dt = dt
  sys_time.t += dt
  perf_end("update")
@@ -981,7 +995,7 @@ function obj_draw( obj, obj_to_world, shadow )
 
 	local scr_vtx = {}
 
- perf_start("vert")
+ perf_begin("vert")
  if not shadow then
   local vc = #obj.vtx
  	for vi=1,vc do
@@ -1003,7 +1017,7 @@ function obj_draw( obj, obj_to_world, shadow )
  local tc = #obj.tri
 
  if not shadow then
-  perf_start("tri")
+  perf_begin("tri")
   for ti=1,tc do
    local t=obj.tri[ti]
    local a = scr_vtx[t[1]]
@@ -1030,7 +1044,7 @@ function obj_draw( obj, obj_to_world, shadow )
   perf_end("tri")
 
  else
-  perf_start("shadow")
+  perf_begin("shadow")
   
   fillp(0b0101101001011010.1)
   for ti=1,tc do
@@ -1069,7 +1083,7 @@ function obj_draw( obj, obj_to_world, shadow )
   end
  end
 
- perf_start("drawlist")
+ perf_begin("drawlist")
 
  dl_draw()
  dl_reset()
@@ -1239,7 +1253,7 @@ function vgrad(y0, y1, i0, i1, g)
 end
 
 function scene_draw_background()
-  perf_start("bg")
+  perf_begin("bg")
   draw_floor()
   fillp()
 
@@ -1336,7 +1350,7 @@ cam_angles = v3(0,0,0)
 
 function _draw()
   perf_reset()
-  perf_start("draw")
+  perf_begin("draw")
 
 	--cls()
 
@@ -1400,8 +1414,7 @@ end
 
  perf_end("draw")
 
-	perf_draw()
- perf_draw_timers()
+ perf_hud()
 end
 
 __gfx__
