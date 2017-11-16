@@ -308,19 +308,37 @@ end
 
 -- rot-trans
 
-function rt_apply(v, rt)
-	--return v3_add( v3_mul_m3(v,rt.r), rt.t)
+-- r11,r12,r13, r21,r22,r23, r31,r32,r33, tx, ty, tz = rt_unpack(rt)
+function rt_unpack(rt)
  local r = rt.r
+ local r1 = r[1]
+ local r2 = r[2]
+ local r3 = r[3] 
  local t = rt.t
- return v3( t[1] + v[1] * r[1][1] + v[2] * r[1][2] + v[3] * r[1][3],
-  t[2] + v[1] * r[2][1] + v[2] * r[2][2] + v[3] * r[2][3],
-  t[3] + v[1] * r[3][1] + v[2] * r[3][2] + v[3] * r[3][3] )
+ return r1[1],r1[2],r1[3], r2[1],r2[2],r2[3], r3[1],r3[2],r3[3], t[1],t[2],t[3]
+end
 
+function rt_apply(v, rt)
+ local r = rt.r
+ local r1 = r[1]
+ local r2 = r[2]
+ local r3 = r[3] 
+ local t = rt.t
+ return v3( t[1] + v[1] * r1[1] + v[2] * r1[2] + v[3] * r1[3],
+  t[2] + v[1] * r2[1] + v[2] * r2[2] + v[3] * r2[3],
+  t[3] + v[1] * r3[1] + v[2] * r3[2] + v[3] * r3[3] )
+end
+
+function rt_apply_unpacked(vx,vy,vz, r11,r12,r13, r21,r22,r23, r31,r32,r33, tx, ty, tz )
+ return 
+  tx + vx * r11 + vy * r12 + vz * r13,
+  ty + vx * r21 + vy * r22 + vz * r23,
+  tz + vx * r31 + vy * r32 + vz * r33
 end
 
 function rt_mul(rta, rtb)
  local rt = {}
- rt.r = m3_mul(rta.r, rtb.r)
+ rt.r = m3_mul(rtb.r, rta.r)
  rt.t = v3_add(rtb.t, v3_mul_m3(rta.t, rtb.r))
  return rt
 end
@@ -456,7 +474,25 @@ end
 function vs_set_obj_mat( obj_to_world )
    vs.obj_to_world = obj_to_world
    vs.obj_to_cam = rt_mul( obj_to_world, vs.world_to_cam )
+
+   local world_to_shadow = 
+   {
+    r = { v3(1,0.3,0), v3(0,0,0), v3(0,0,1) },
+    t = v3(0,0,0)
+   }
+   vs.obj_to_cam_shadow = rt_mul( rt_mul( obj_to_world, world_to_shadow ), vs.world_to_cam )
    vs.world_to_obj_rot = m3_trans( obj_to_world.r )
+end
+
+
+-- sx,sy,ox,oy
+function vs_unpack_view_to_screen()
+ return vs.st_scale[1] * vs.pdist, vs.st_scale[2] * vs.pdist, vs.st_offset[1], vs.st_offset[2]
+end
+
+function vs_view_to_screen_unpacked( x,y,z, sx,sy,ox,oy )
+ local w = 1. / z
+ return { x * w * sx + ox, y * w * sy + oy, z, w }
 end
 
 
@@ -502,7 +538,7 @@ end
 
 function dl_tri(v)
    fillp(v.fp)
-   gfx_tri_fill( v.a, v.b, v.c, v.col )
+   trifill( v.a, v.b, v.c, v.col )
 end   
 
 function dl_line(v)
@@ -601,10 +637,10 @@ function gfx_3d_print(p, str, col)
 end
 
 
-function gfx_tri_wire( a, b, c )
-	line(a[1], a[2], b[1], b[2])
-	line(b[1], b[2], c[1], c[2])
-	line(c[1], c[2], a[1], a[2])
+function tri( a, b, c, col )
+	line(a[1], a[2], b[1], b[2], col)
+	line(b[1], b[2], c[1], c[2], col)
+	line(c[1], c[2], a[1], a[2], col)
 end
 
 function hline( xl, xr, y, col )
@@ -659,7 +695,7 @@ function sort_y_3( a, b, c )
  return a,b,c
 end
 
-function gfx_tri_fill( a, b, c, col )
+function trifill( a, b, c, col )
 
 	-- sort vertices
  a,b,c = sort_y_3( a, b, c )
@@ -814,7 +850,7 @@ function obj_calc_normals()
 		dab = v3_sub( ovb, ova )
 		dbc = v3_sub( ovc, ovb )
 
-		t.n = v3_normalize( v3_cross( dab, dbc ) )	
+		t[5] = v3_normalize( v3_cross( dab, dbc ) )	
 	end	
 end
 
@@ -846,29 +882,29 @@ end
 function obj_make_cube()
 	obj = {}
 	obj.vtx = {
-  v3(-1, -1, -1),
-  v3(1, -1, -1),
-  v3(-1, 1, -1),
-  v3(1, 1, -1),
-  v3(1, -1, 1),
-  v3(-1, -1, 1),
-  v3(1, 1, 1),
-  v3(-1, 1, 1),
+  {-1, -1, -1},
+  {1, -1, -1},
+  {-1, 1, -1},
+  {1, 1, -1},
+  {1, -1, 1},
+  {-1, -1, 1},
+  {1, 1, 1},
+  {-1, 1, 1},
  }
 
 	obj.tri = { 
-		{ 1, 2, 3, c = 1 },
-		{ 2, 4, 3, c = 1 },
-		{ 5, 6, 7, c = 1 },
-		{ 6, 8, 7, c = 1 },
-		{ 6, 1, 8, c = 2 },
-		{ 8, 1, 3, c = 2 },
-		{ 2, 5, 7, c = 2 },
-		{ 2, 7, 4, c = 2 },
-		{ 6, 5, 1, c = 3 },
-		{ 5, 2, 1, c = 3 },
-		{ 3, 7, 8, c = 4 },
-		{ 3, 4, 7, c = 4 },
+		{ 1, 2, 3, 1 },
+		{ 2, 4, 3, 1 },
+		{ 5, 6, 7, 1 },
+		{ 6, 8, 7, 1 },
+		{ 6, 1, 8, 2 },
+		{ 8, 1, 3, 2 },
+		{ 2, 5, 7, 2 },
+		{ 2, 7, 4, 2 },
+		{ 6, 5, 1, 3 },
+		{ 5, 2, 1, 3 },
+		{ 3, 7, 8, 4 },
+		{ 3, 4, 7, 4 },
 	}
 
  --obj.line = {
@@ -885,51 +921,52 @@ end
 
 function obj_make_fox()
  obj = {}
- obj.vtx = {}
+ obj.vtx = {
+  {0.986111,-0.025855,0.300339},
+  {-1.005903,-0.025855,0.300340},
+  {-0.005903,0.000000,-3.763774},
+  {-0.005903,1.000000,0.300339},
+  {-0.005903,0.525322,1.004954},
+  {-1.636132,-0.269847,-0.689093},
+  {-1.874824,0.244348,0.182332},
+  {-1.743159,1.274788,1.228072},
+  {-1.264151,0.050001,0.029176},
+  {-4.5,-1.035814,1.553706},
+  {-1.189264,-0.440330,-1.404416},
+  {-1.015540,0.175132,0.075046},
+  {1.851038,0.244348,0.182331},
+  {1.240366,0.050001,0.029176},
+  {0.991755,0.175132,0.075046},
+  {1.612347,-0.269847,-0.689093},
+  {4.5,-1.035814,1.553705},
+  {1.165478,-0.440330,-1.404416},
+  {1.719373,1.274788,1.22807},
+ }
 
-obj.vtx[1] = v3(0.986111,-0.025855,0.300339)
-obj.vtx[2] = v3(-1.005903,-0.025855,0.300340)
-obj.vtx[3] = v3(-0.005903,0.000000,-3.763774)
-obj.vtx[4] = v3(-0.005903,1.000000,0.300339)
-obj.vtx[5] = v3(-0.005903,0.525322,1.004954)
-obj.vtx[6] = v3(-1.636132,-0.269847,-0.689093)
-obj.vtx[7] = v3(-1.874824,0.244348,0.182332)
-obj.vtx[8] = v3(-1.743159,1.274788,1.228072)
-obj.vtx[9] = v3(-1.264151,0.050001,0.029176)
-obj.vtx[10] = v3(-4.5,-1.035814,1.553706)
-obj.vtx[11] = v3(-1.189264,-0.440330,-1.404416)
-obj.vtx[12] = v3(-1.015540,0.175132,0.075046)
-obj.vtx[13] = v3(1.851038,0.244348,0.182331)
-obj.vtx[14] = v3(1.240366,0.050001,0.029176)
-obj.vtx[15] = v3(0.991755,0.175132,0.075046)
-obj.vtx[16] = v3(1.612347,-0.269847,-0.689093)
-obj.vtx[17] = v3(4.5,-1.035814,1.553705)
-obj.vtx[18] = v3(1.165478,-0.440330,-1.404416)
-obj.vtx[19] = v3(1.719373,1.274788,1.22807)
 
  obj.tri = { 
-{1,4,5,  c=5 }, --cowel left
-{4,2,5,  c=6 }, --cowel right
-{2,1,5,  c=9 }, --engine
-{2,4,3,  c=7 }, --ship right
-{1,2,3,  c=5 }, --ship bottom
-{4,1,3,  c=6 }, --ship left
-{6,7,2,  c=7 }, --right wing inside
-{10,7,6, c=6 }, --right wing front --hidden
-{10,2,7, c=6 }, --right wing top
-{6,2,10, c=5}, --right wing bottom
-{11,9,8, c=1},
-{9,8,12, c=1}, --right spoil top
-{9,11,12, c=1}, --right spoil side
-{11,12,8, c=1}, --right spoil front
-{17,16,13, c=6}, --right wing front
-{18,19,14, c=1 },
-{14,19,15, c=1 }, --left spoil top
-{14,15,18, c=1 }, --left spoil side
-{18,15,19, c=1 }, --left spoil bottom
-{17,1,13, c=6 }, --left wing back
-{16,13,1, c=6 }, 
-{16,17,1, c=5 } --left wing bottom
+{1,4,5,  5 }, --cowel left
+{4,2,5,  6 }, --cowel right
+{2,1,5,  9 }, --engine
+{2,4,3,  7 }, --ship right
+{1,2,3,  5 }, --ship bottom
+{4,1,3,  6 }, --ship left
+{6,7,2,  7 }, --right wing inside
+{10,7,6, 6 }, --right wing front --hidden
+{10,2,7, 6 }, --right wing top
+{6,2,10, 5}, --right wing bottom
+{11,9,8, 1},
+{9,8,12, 1}, --right spoil top
+{9,11,12, 1}, --right spoil side
+{11,12,8, 1}, --right spoil front
+{17,16,13, 6}, --right wing front
+{18,19,14, 1 },
+{14,19,15, 1 }, --left spoil top
+{14,15,18, 1 }, --left spoil side
+{18,15,19, 1 }, --left spoil bottom
+{17,1,13, 6 }, --left wing back
+{16,13,1, 6 }, 
+{16,17,1, 5 } --left wing bottom
  }
 
  --obj.line = {
@@ -971,8 +1008,8 @@ function obj_make_torus(r0, r1, sweepsteps, steps)
    i1 = 1+ step1 * sweepsteps + sweep
    i2 = 1+ step1 * sweepsteps + sweep1
    i3 = 1+ step * sweepsteps + sweep1
-   add( obj.tri, {i0, i1, i2, c=1 } ) 
-   add( obj.tri, {i0, i2, i3, c=1 } ) 
+   add( obj.tri, {i0, i1, i2, 1 } ) 
+   add( obj.tri, {i0, i2, i3, 1 } ) 
   end
  end  
 
@@ -996,20 +1033,40 @@ function obj_draw( obj, obj_to_world, shadow )
 	local scr_vtx = {}
 
  perf_begin("vert")
+ local vtx = obj.vtx
+ local vc = #vtx
+
+ local sx,sy,ox,oy = vs_unpack_view_to_screen()
+ --vs_view_to_screen_unpacked(v[1],v[2],v[3],sx,sy,ox,oy)
+ 
+ local r11,r12,r13, r21,r22,r23, r31,r32,r33, tx, ty, tz
+
  if not shadow then
-  local vc = #obj.vtx
- 	for vi=1,vc do
- 	 scr_vtx[vi] = vs_view_to_screen( rt_apply( obj.vtx[vi], vs.obj_to_cam ) )
- 	end
+  r11,r12,r13, r21,r22,r23, r31,r32,r33, tx, ty, tz = rt_unpack(vs.obj_to_cam)
 
   ldir = v3(0,1,0)
   obj_ldir = v3_mul_m3( ldir, vs.world_to_obj_rot )
  else
-  local vc = #obj.vtx
- 	for vi=1,vc do
-   scr_vtx[vi] = transform_vert_shadow(obj.vtx[vi])
-  end
+  r11,r12,r13, r21,r22,r23, r31,r32,r33, tx, ty, tz = rt_unpack(vs.obj_to_cam_shadow) 
  end
+
+ for vi=1,vc do
+  local ov = vtx[vi]
+  local vx,vy,vz = rt_apply_unpacked( ov[1], ov[2], ov[3], r11,r12,r13, r21,r22,r23, r31,r32,r33, tx, ty, tz )
+  scr_vtx[vi] = vs_view_to_screen_unpacked(vx,vy,vz,sx,sy,ox,oy)
+ end
+
+-- 	for vi=1,vc do
+--
+--   local ov = vtx[vi]
+--   local vw = rt_apply( vtx[vi], vs.obj_to_world )   
+--
+--   vw[1] += vw[2] * 0.2
+--   vw[2] = 0
+--   local v = rt_apply( vw, vs.world_to_cam )
+--   scr_vtx[vi] = vs_view_to_screen_unpacked( v[1],v[2],v[3],sx,sy,ox,oy )  
+--   --scr_vtx[vi] = transform_vert_shadow(vtx[vi])
+--  end
 
  perf_end("vert")
 
@@ -1030,14 +1087,14 @@ function obj_draw( obj, obj_to_world, shadow )
 
      local col, fp
 
-     local ldotn = v3_dot(obj_ldir, t.n)
+     local ldotn = v3_dot(obj_ldir, t[5])
      local s = sat( ldotn * -0.5 + 0.5)
-     local d = gfx_dither( t.c, s )  
+     local d = gfx_dither( t[4], s )  
 
      local key = (a[3] + b[3] + c[3]) / 3
      add( drawlist, { key=key, fn = dl_tri, value = {a=a, b=b, c=c, col=d.c, fp=d.f } } )
      --fillp(d.f)
-     --gfx_tri_fill( a, b, c, d.c )
+     --trifill( a, b, c, d.c )
    end
    end
   end
@@ -1057,7 +1114,7 @@ function obj_draw( obj, obj_to_world, shadow )
    if a[3] > vs.near and b[3] > vs.near and c[3] > vs.near then
     -- backface cull
     if v2_cross( v2_sub( b, a ), v2_sub( c, b ) ) < 0.0 then
-     gfx_tri_fill( a, b, c, 0 )
+     trifill( a, b, c, 0 )
     end
    end
   end
@@ -1082,13 +1139,6 @@ function obj_draw( obj, obj_to_world, shadow )
    end
   end
  end
-
- perf_begin("drawlist")
-
- dl_draw()
- dl_reset()
- perf_end("drawlist")
-
 end
 
 
@@ -1356,7 +1406,7 @@ function _draw()
 
 	--map(0,0, 0,0, 16,16)
 
-	-- gfx_tri_fill( v2(10, 30), v2(50, 40), v2(25, 100), 0x1111 )
+	-- trifill( v2(10, 30), v2(50, 40), v2(25, 100), 0x1111 )
 
 -- drawlist
 
@@ -1406,6 +1456,12 @@ if 0 == 0 then
 
  scene_draw( true )
  scene_draw( false )
+
+ perf_begin("drawlist")
+ dl_draw()
+ dl_reset()
+ perf_end("drawlist")
+
 
  --gfx_3d_print(v3(0, 4, 0), "hello", 7)
 
