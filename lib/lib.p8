@@ -17,10 +17,6 @@ function ceil(num)
  return flr(num+0x0.ffff)
 end
 
-function sat(num)
- return mid(num, 0, 1)
-end
-
 function min3(a,b,c)
  return min(a, min(b,c))
 end
@@ -653,44 +649,6 @@ function tri( a, b, c, col )
 	line(c[1], c[2], a[1], a[2], col)
 end
 
-function hline( xl, xr, y, col )
-	--if y < vs.sc.tl.y or y >= vs.sc.br.y then return end
-
-	if xr < xl then xl,xr = xr,xl end
-	xl = flr(xl)
-	xr = flr(xr)
-	xl = mid( xl, vs.scl, vs.scr )
-	xr = mid( xr, vs.scl, vs.scr )
-
-	x = xl
-	w = xr - xl
-	
-	--hspan( xl, y, xr-xl, cc )
-
-	if (w <= 0) return
-
-	scan = 0x6000 + y * 64
-	addr = scan + flr( x / 2 )
-
-	if x % 2 == 1 then
-		val = peek( addr )
-		poke( addr, band(val, 0x0f) + band(cc, 0xf0))
-		w-=1
-		addr += 1
-	end
-
-	b = flr(w / 2)
-	memset( addr, cc, b )
-
-	w -= b * 2
-	addr += b
-
-	if w > 0 then
-		val = peek( addr )
-		poke( addr, band(val, 0xf0) + band(cc, 0x0f))
-	end	
-end
-
 function sort_y_3( ax,ay, bx,by, cx,cy )
  if ay > by then
   ax,ay,bx,by = bx,by,ax,ay
@@ -827,7 +785,7 @@ function _init()
  perf_reset()
 
 	obj_cube = obj_make_cube()
- obj_torus = obj_make_torus(0.75,0.5, 6, 6)
+ obj_torus = obj_make_torus(0.75,0.5, 10, 6)
  obj_fox = obj_make_fox()
  init_dither()
 end
@@ -1027,12 +985,6 @@ function obj_make_torus(r0, r1, sweepsteps, steps)
  return obj
 end
 
-function transform_vert_shadow( ov )
-   local vw = rt_apply( ov, vs.obj_to_world )   
-   vw[1] += vw[2] * 0.2
-   vw[2] = 0
-   return vs_view_to_screen( rt_apply( vw, vs.world_to_cam ) )
-end
 
 function obj_draw( obj, obj_to_world, shadow )
  vs_set_obj_mat( obj_to_world )
@@ -1043,9 +995,7 @@ function obj_draw( obj, obj_to_world, shadow )
  local vtx = obj.vtx
  local vc = #vtx
 
- local sx,sy,ox,oy = vs_unpack_view_to_screen()
- --vs_view_to_screen_unpacked(v[1],v[2],v[3],sx,sy,ox,oy)
- 
+ local sx,sy,ox,oy = vs_unpack_view_to_screen() 
  local r11,r12,r13, r21,r22,r23, r31,r32,r33, tx, ty, tz
 
  if not shadow then
@@ -1063,23 +1013,12 @@ function obj_draw( obj, obj_to_world, shadow )
   scr_vtx[vi] = vs_view_to_screen_unpacked(vx,vy,vz,sx,sy,ox,oy)
  end
 
--- 	for vi=1,vc do
---
---   local ov = vtx[vi]
---   local vw = rt_apply( vtx[vi], vs.obj_to_world )   
---
---   vw[1] += vw[2] * 0.2
---   vw[2] = 0
---   local v = rt_apply( vw, vs.world_to_cam )
---   scr_vtx[vi] = vs_view_to_screen_unpacked( v[1],v[2],v[3],sx,sy,ox,oy )  
---   --scr_vtx[vi] = transform_vert_shadow(vtx[vi])
---  end
-
  perf_end("vert")
 
 
  local tc = #obj.tri
 
+  local third = 1/3
  if not shadow then
   perf_begin("tri")
   for ti=1,tc do
@@ -1088,18 +1027,17 @@ function obj_draw( obj, obj_to_world, shadow )
    local b = scr_vtx[t[2]]
    local c = scr_vtx[t[3]]
 
-   -- backface cull
+   -- backface cull   
    if v2_cross( v2_sub( b, a ), v2_sub( c, b ) ) < 0.0 then
     if a[3] > vs.near and b[3] > vs.near and c[3] > vs.near then
 
      local col, fp
 
      local ldotn = v3_dot(obj_ldir, t[5])
-     local s = sat( ldotn * -0.5 + 0.5)
+     local s = mid( ldotn * -0.5 + 0.5, 0, 1)
      local d = gfx_dither( t[4], s )  
 
-     local key = (a[3] + b[3] + c[3]) / 3
-     add( drawlist, { key=key, fn = dl_tri, value = {a=a, b=b, c=c, col=d.c, fp=d.f } } )
+     add( drawlist, { key=(a[3] + b[3] + c[3]) * third, fn = dl_tri, value = {a=a, b=b, c=c, col=d.c, fp=d.f } } )
      --fillp(d.f)
      --trifill( a, b, c, d.c )
    end
@@ -1145,6 +1083,13 @@ function obj_draw( obj, obj_to_world, shadow )
     end
    end
   end
+ end
+
+ if not shadoe then
+  perf_begin("drawlist")
+  dl_draw()
+  dl_reset()
+  perf_end("drawlist")
  end
 end
 
@@ -1281,7 +1226,7 @@ function scene_build()
    -- gfx_3d_sprite( rt_apply( cube.bounds.c, obj_to_world ), cube.bounds.r, cube.bounds.r * 0.75, 8, 0, 16, 16 )
    
    for z=3,-3,-1 do
-    --scene_add_sprite( v3(4,0.5,z * 4), spr_def )
+    scene_add_sprite( v3(4,0.5,z * 4), spr_def )
     --scene_add_sprite( v3(-4,0.5,z * 4), spr_def )
    end
 
@@ -1463,11 +1408,6 @@ if 0 == 0 then
 
  scene_draw( true )
  scene_draw( false )
-
- perf_begin("drawlist")
- dl_draw()
- dl_reset()
- perf_end("drawlist")
 
 
  --gfx_3d_print(v3(0, 4, 0), "hello", 7)
