@@ -1,327 +1,56 @@
 pico-8 cartridge // http://www.pico-8.com
 version 14
 __lua__
+-- quaternion
 
--- vector2
-
-function v2_unpack(v)
- return v[1],v[2]
+function q_unpack(q)
+ return q[1],q[2],q[3],q[4]
 end
 
-function v2_tostring(x,y)
- return "(" .. x .. "," .. y .. ")"
-end
-
-function v2_neg(x,y)
- return -x,-y
-end
-
-function v2_rcp(x,y)
- return 1/x,1/y
-end
-
-function v2_add(ax,ay,bx,by)
- return ax+bx,ay+by
-end
-
-function v2_add_s(ax,ay,b)
- return ax+b,ay+b
-end
-
-function v2_sub(ax,ay,bx,by)
- return ax-bx,ay-by
-end
-
-function v2_sub_s(ax,ay,b)
- return ax-b,ay-b
-end
-
-function v2_mul(ax,ay,bx,by)
-	return ax * bx, ay * by
-end
-
-function v2_mul_s(ax,ay,b)
- return ax * b, ay * b
-end
-
-function v2_cross(ax,ay,bx,by)
-	return ax*by-ay*bx
-end
-
--- vector3 
-
-function v3_unpack(v)
- return v[1],v[2],v[3]
-end
-
-function v3_tostring(x,y,z)
-	return "(" .. x .. "," .. y .. "," .. z .. ")"
-end
-
-function v3_neg(x,y,z)
-	return -x,-y,-z
-end
-
-function v3_rcp(x,y,z)
- return 1/x,1/y,1/z
-end
-
-function v3_add(ax,ay,az,bx,by,bz)
-	return ax+bx,ay+by,az+bz
-end
-
-function v3_add_s(ax,ay,az,b)
-	return ax+b,ay+b,az+b
-end
-
-function v3_sub(ax,ay,az,bx,by,bz)
-	return ax-bx,ay-by,az-bz
-end
-
-function v3_sub_s(ax,ay,az,b)
- return ax-b,ay-b,az-b
-end
-
-function v3_mul(ax,ay,az,bx,by,bz)
-	return ax*bx,ay*by,az*bz
-end
-
-function v3_mul_s(ax,ay,az,b)
-	return ax*b,ay*b,az*b
-end
-
-function v3_dot(ax,ay,az,bx,by,bz)
-	return ax*bx + ay*by + az*bz
-end
-
-function v3_cross(ax,ay,az,bx,by,bz)
-	return ay*bz - az*by, az*bx - ax*bz, ax*by - ay*bx
-end
-
-function v3_min(ax,ay,az,bx,by,bz)
-	return min(ax,bx), min(ay,by), min(az,bz)
-end
-
-function v3_max(ax,ay,az,bx,by,bz)
- return max(ax,bx), max(ay,by), max(az,bz)
-end
-
-function v3_length(x,y,z)
-	return sqrt( v3_dot(x,y,z,x,y,z) )
-end	
-
-function v3_normalize(x,y,z)
- local rl = 1 / v3_length(x,y,z)
-	return x*rl, y*rl, z*rl
-end
-
--- plane
-
-function pl_abc(ax,ay,az,bx,by,bz,cx,cy,cz)
- local nx,ny,nz = v3_normalize( v3_cross(v3_sub(ax,ay,az, bx,by,bz), v3_sub(cx,cy,cz, bx,by,bz)) )
- return nx,ny,nz,-v3_dot(nx,ny,nz, ax,ay,az)
-end
-
-function pl_dist(px,py,pz,pd, vx,vy,vz)
- return px*vx + py*vy + pz*vz + pd
-end
-
--- matrix
-
-function m3_unpack(m)
- return m[1],m[2],m[3], m[4],m[5],m[6], m[7],m[8],m[9]
-end
-
-function m3_id()
-	return 1,0,0, 0,1,0, 0,0,1
-end	
-
-function m3_get_ax(m)
- return m[1], m[4], m[7]
-end
-function m3_get_ay(m)
- return m[2], m[5], m[8]
-end
-
-function m3_get_az(m)
- return m[3], m[6], m[9]
-end
-
-function m3_rot_x(t)
-	local s = sin(t)
-	local c = cos(t)
-	return 1,0,0, 0,c,s, 0,-s,c
-end
-
-function m3_rot_y(t)
-	local s = sin(t)
-	local c = cos(t)
-	return c,0,-s, 0,1,0, s,0,c
-end
-
-function m3_rot_z(t)
-	local s = sin(t)
-	local c = cos(t)
-	return c,-s,0, s,c,0, 0,0,1
-end
-
-function m3_mul(a11,a12,a13, a21,a22,a23, a31,a32,a33, b11,b12,b13, b21,b22,b23, b31,b32,b33)
- -- aik * bkj + aik * bkj + aik * bkj
+function q_mul_q(qax,qay,qaz,qaw, qbx,qby,qbz,qbw)
  return 
-  a11 * b11 + ai2 * b21 + a13 * b31,
-  a11 * b12 + ai2 * b22 + a13 * b32,
-  a11 * b13 + ai2 * b23 + a13 * b33,
-  a21 * b11 + ai2 * b21 + a23 * b31,
-  a21 * b12 + ai2 * b22 + a23 * b32,
-  a21 * b13 + ai2 * b23 + a23 * b33,
-  a31 * b11 + ai2 * b21 + a33 * b31,
-  a31 * b12 + ai2 * b22 + a33 * b32,
-  a31 * b13 + ai2 * b23 + a33 * b33
-end 
-
-function m3_trans(m11,m12,m13, m21,m22,m23, m31,m32,m33)
- return m11,m21,m31, m12,m22,m32, m13,m23,m33
+  qay*qbz - qaz*qby + qax*qbw + qaw*qbx,
+  qaz*qbx - qax*qbz + qay*qbw + qaw*qby,
+  qax*qby - qay*qbx + qaz*qbw + qaw*qbz,
+  qaw*qbw - qax*qbx - qay*qby - qaz*qbz
 end
 
-
-function v3_mul_m3(vx,vy,vz, m11,m12,m13, m21,m22,m23, m31,m32,m33)
-	return
-  vx * m11 + vy * m12 + vz * m13,
-	 vx * m21 + vy * m22 + vz * m23,
-	 vx * m31 + vy * m32 + vz * m33
+function q_axis_angle( v, t )
+ return v3_mul_s( v3_normalize(v), sin(t)), cos(t)
 end
 
--- rot-trans
+function m3_from_q(qx,qy,qz,qw)
+ local sqx,sqy,sqz,sqw = qx*qx,qy*qy,qz*qz,qw*qw
 
-function rt_unpack(rt)
- return m3_unpack(rt.r), v3_unpack(rt.t)
-end
-
-function rt_apply(vx,vy,vz, r11,r12,r13, r21,r22,r23, r31,r32,r33, tx, ty, tz )
- return 
-  tx + vx * r11 + vy * r12 + vz * r13,
-  ty + vx * r21 + vy * r22 + vz * r23,
-  tz + vx * r31 + vy * r32 + vz * r33
-end
-
-function rt_mul(rta, rtb)
- return {
-  r = { m3_mul(m3_unpack(rta.r), m3_unpack(rtb.r)) },
-  t = { v3_add(v3_unpack(rtb.t), v3_mul_m3(v3_unpack(rta.t), m3_unpack(rtb.r))) }
- }
-end
-
-function rt_inv(rt)
- local r = { m3_trans( m3_unpack(rt.r) ) }
- return { r=r, t= { v3_mul_m3(v3_neg( v3_unpack(rt.t) ), r ) } }
-end
-
-function _init()
- print ""
- print "v2 tests:"
- print ""
-
- local ax,ay = 1,2
- local vx,vy = v2_neg(ax, ay)
- print( "v2_neg( " .. v2_tostring(ax,ay) .. " ) = " .. v2_tostring(vx,vy))
-
- local ax,ay = 1, 2
- local vx,vy = v2_rcp(ax, ay)
- print( "v2_rcp( " .. v2_tostring(ax,ay) .. " ) = " .. v2_tostring(vx,vy))
-
- local ax,ay = 2,3
- local bx,by = 4,5
- local vx,vy = v2_add(ax,ay,bx,by)
- print( "v2_add( " .. v2_tostring(ax,ay) .. ", " .. v2_tostring(bx,by) .. " ) = " .. v2_tostring(vx,vy) )
-
- local ax,ay = 2,3
- local b = 5
- local vx,vy = v2_add_s(ax,ay,b)
- print( "v2_add_s( " .. v2_tostring(ax,ay) .. ", " .. b .. " ) = " .. v2_tostring(vx,vy) )
-
- local ax,ay = 4,6
- local bx,by = 2,3
- local vx,vy = v2_sub(ax,ay,bx,by)
- print( "v2_sub( " .. v2_tostring(ax,ay) .. ", " .. v2_tostring(bx,by) .. " ) = " .. v2_tostring(vx,vy) )
-
- local ax,ay = 2,3
- local b = 5
- local vx,vy = v2_sub_s(ax,ay,b)
- print( "v2_sub_s( " .. v2_tostring(ax,ay) .. ", " .. b .. " ) = " .. v2_tostring(vx,vy) )
-
- local ax,ay = 4,6
- local bx,by = 2,3
- local vx,vy = v2_mul(ax,ay,bx,by)
- print( "v2_mul( " .. v2_tostring(ax,ay) .. ", " .. v2_tostring(bx,by) .. " ) = " .. v2_tostring(vx,vy) )
-
- local ax,ay = 4,6
- local b = 2
- local vx,vy = v2_mul_s(ax,ay,b)
- print( "v2_mul_s( " .. v2_tostring(ax,ay) .. ", " .. b .. " ) = " .. v2_tostring(vx,vy) )
-
+ local xy2 = qx * qy * 2
+ local xz2 = qx * qz * 2
+ local yz2 = qy * qz * 2
+ local wx2 = qw * qx * 2
+ local wy2 = qw * qy * 2
+ local wz2 = qw * qz * 2
  
- local ax,ay = 1,2
- local bx,by = 3,4
- local v = v2_cross(ax,ay,bx,by)
- print( "v2_cross( " .. v2_tostring(ax,ay) .. ", " .. v2_tostring(bx,by) .. " ) = " .. v )
-
- print ""
- print "v3 tests:"
- print ""
-
-
- local ax,ay,az = 1,2,3
- local vx,vy,vz = v3_neg(ax, ay, az)
- print( "v3_neg( " .. v3_tostring(ax,ay,az) .. " ) = " .. v3_tostring(vx,vy,vz))
-
- local ax,ay,az = 1, 2, 3
- local vx,vy,vz = v3_rcp(ax,ay,az)
- print( "v3_rcp( " .. v3_tostring(ax,ay,az) .. " ) = " .. v3_tostring(vx,vy,vz))
-
- local ax,ay,az = 2,3,4
- local bx,by,bz = 4,5,6
- local vx,vy = v3_add(ax,ay,az,bx,by,bz)
- print( "v3_add( " .. v3_tostring(ax,ay,az) .. ", " .. v3_tostring(bx,by,bz) .. " ) = " .. v3_tostring(vx,vy,vz) )
-
- local ax,ay,az = 2,3,4
- local b = 5
- local vx,vy,vz = v3_add_s(ax,ay,az,b)
- print( "v3_add_s( " .. v3_tostring(ax,ay,az) .. ", " .. b .. " ) = " .. v3_tostring(vx,vy,vz) )
-
- local ax,ay,az = 4,6,8
- local bx,by,bz = 2,3,4
- local vx,vy,vz = v3_sub(ax,ay,az,bx,by,bz)
- print( "v3_sub( " .. v3_tostring(ax,ay,az) .. ", " .. v3_tostring(bx,by,bz) .. " ) = " .. v3_tostring(vx,vy,vz) )
-
- local ax,ay,az = 2,3,4
- local b = 5
- local vx,vy,vz = v3_sub_s(ax,ay,az,b)
- print( "v3_sub_s( " .. v3_tostring(ax,ay,az) .. ", " .. b .. " ) = " .. v3_tostring(vx,vy,vz) )
-
- local ax,ay,az = 4,6,9
- local bx,by,bz = 2,3,4
- local vx,vy,vz = v3_mul(ax,ay,az,bx,by,bz)
- print( "v3_mul( " .. v3_tostring(ax,ay,az) .. ", " .. v3_tostring(bx,by,bz) .. " ) = " .. v3_tostring(vx,vy,vz) )
-
- local ax,ay,az = 4,6,9
- local b = 2
- local vx,vy,vz = v3_mul_s(ax,ay,az,b)
- print( "v3_mul_s( " .. v3_tostring(ax,ay,az) .. ", " .. b .. " ) = " .. v3_tostring(vx,vy,vz) )
-
- local vx,vy,vz = 1,2,3
- local l = v3_length(vx,vy,vz)
- print( "v3_length( " .. v3_tostring(vx,vy,vz) .. " ) = " .. l )
-
- local vx,vy,vz = 1,2,3
- local nx,ny,nz = v3_normalize(vx,vy,vz)
- print( "v3_normalize( " .. v3_tostring(vx,vy,vz) .. " ) = " .. v3_tostring(nx,ny,nz) )
-
- local ax,ay,az = 4,6,9
- local bx,by,bz = 2,3,4
- local vx,vy,vz = v3_add_s( v3_mul(ax,ay,az,bx,by,bz), 3. )
-
-
+ return m3( 
+     { qsq.w + qsq.x - qsq.y - qsq.z, xy2 - wz2, xz2 + wy2 },
+     { xy2 + wz2, qsq.w - qsq.x + qsq.y - qsq.z, yz2 - wx2 },
+     { xz2 - wy2, yz2 + wx2, qsq.w - qsq.x - qsq.y + qsq.z } )
 end
+
+--function v3_mul_q( vx,vy,vz, qx,qy,qz,qw )
+ --tx,ty,tz = v3_mul_s( v3_cross(qx,qy,qz, vx,vy,vz), 2 )
+ --return v3_add( v3_add( vx, vy, vz, v3_mul_s(tx,ty,tz,qw) ), v3_cross(qx,qy,qz, tx,ty,tz) )
+--end 
+
+-- https://gamedev.stackexchange.com/questions/28395/rotating-vector3-by-a-quaternion
+
+function v3_mul_q(vx,vy,vz, qx,qy,qz,qw )
+ local s1 = (qx * vx + qy * vy + qz * vz) * 2
+ local s2 = qw * qw - qx * qx - qy * qy - qz * qz
+ local s3 = qw * 2
+ return 
+  qx * s1 + vx * s2 + (qy*vz - qz*vy) * s3,
+  qy * s1 + vy * s2 + (qz*vx - qx*vz) * s3,
+  qz * s1 + vz * s2 + (qx*vy - qy*vx) * s3
+end  
 
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000

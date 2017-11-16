@@ -5,6 +5,15 @@ __lua__
 dbg = 0
 perf = 0
 
+----------------------
+-- system
+----------------------
+
+dbg = 0
+perf = true
+
+perf_counters = {}
+
 -- misc
 
 function ceil(num)
@@ -23,17 +32,23 @@ function max3(a,b,c)
  return max(a, max(b,c))
 end
 
+sys_time = { t=0, dt=1/60, b=60 }
+
+function sys_time_tick(framerate)
+ sys_time.b=framerate
+ sys_time.dt=1/framerate
+ sys_time.t+=sys_time.dt
+end
+
 -- perf
 
-perf_counters = {}
-
-function perf_add_counter( key )
- if (perf==0) return
+function perf_counter( key )
+ if (not perf) return
  perf_counters[key] = { name = key, total = 0, avg = 0 }
 end
 
 function perf_reset()
- if (perf==0) return
+ if (not perf) return
  for k,c in pairs(perf_counters) do
   c.avg = c.avg * 0.95 + c.total * 0.05
   c.total = 0
@@ -45,8 +60,8 @@ function perf_timer()
  return 1000 * stat(1) / 60
 end
 
-function perf_start( key )
- if (perf==0) return
+function perf_begin( key )
+ if (not perf) return
  c = perf_counters[key]
  if c then 
   c.start = perf_timer()
@@ -54,7 +69,7 @@ function perf_start( key )
 end
 
 function perf_end( key )
- if (perf==0) return
+ if (not perf) return
  c = perf_counters[key]
  if c then 
   c.total += perf_timer() - c.start
@@ -64,7 +79,7 @@ function perf_end( key )
 end
 
 function perf_draw_timers()
- if (perf==0) return
+ if (not perf) return
  cursor(0,0)
  color(7)
  for k,c in pairs(perf_counters) do
@@ -72,7 +87,7 @@ function perf_draw_timers()
  end
 end
 
-function perf_draw()
+function perf_hud()
  clip()
  local cpu=flr(stat(1)*100)
  local fps=sys_time.b/ceil(stat(1))
@@ -83,240 +98,223 @@ function perf_draw()
   mem .. " mb"
  print(perf,0,122,0)
  print(perf,0,121,fps==sys_time.b and 7 or 8)
+
+ perf_draw_timers()
 end
 
 -- vector2
 
-function v2(x,y)
- return {x,y}
+function v2_unpack(v)
+ return v[1],v[2]
 end
 
-function v2_tostring(a)
- return "(" .. a[1] .. "," .. a[2] .. ")"
+function v2_tostring(x,y)
+ return "(" .. x .. "," .. y .. ")"
 end
 
-function v2_neg(a)
- return v2(-a[1], -a[2])
+function v2_neg(x,y)
+ return -x,-y
 end
 
-function v2_rcp(a)
- return v2(1/a[1], 1/a[2])
+function v2_rcp(x,y)
+ return 1/x,1/y
 end
 
-function v2_add(a,b)
- return v2(a[1]+b[1], a[2]+b[2])
+function v2_add(ax,ay,bx,by)
+ return ax+bx,ay+by
 end
 
-function v2_add_s(a,b)
- return v2(a[1]+b, a[2]+b)
+function v2_add_s(ax,ay,b)
+ return ax+b,ay+b
 end
 
-function v2_sub(a,b)
- return v2(a[1]-b[1], a[2]-b[2])
+function v2_sub(ax,ay,bx,by)
+ return ax-bx,ay-by
 end
 
-function v2_mul(a, b)
-	return v2( a[1] * b[1], a[2] * b[2] )
+function v2_sub_s(ax,ay,b)
+ return ax-b,ay-b
 end
 
-function v2_mul_s(a, b)
-    return v2( a[1] * b, a[2] * b )
+function v2_mul(ax,ay,bx,by)
+ return ax * bx, ay * by
 end
 
-function v2_cross(a,b)
-	return a[1]*b[2]-a[2]*b[1]
+function v2_mul_s(ax,ay,b)
+ return ax * b, ay * b
+end
+
+function v2_cross(ax,ay,bx,by)
+ return ax*by-ay*bx
 end
 
 -- vector3 
 
-function v3(x,y,z)
-	return {x,y,z}
+function v3_unpack(v)
+ return v[1],v[2],v[3]
 end
 
-function v3_tostring(a)
-	return "(" .. a[1] .. "," .. a[2] .. "," .. a[3] .. ")"
+function v3_tostring(x,y,z)
+ return "(" .. x .. "," .. y .. "," .. z .. ")"
 end
 
-function v3_neg(a)
-	return v3(-a[1], -a[2], -a[3])
+function v3_neg(x,y,z)
+ return -x,-y,-z
 end
 
-function v3_rcp(a)
- return v3(1/a[1], 1/a[2], 1/a[3])
+function v3_rcp(x,y,z)
+ return 1/x,1/y,1/z
 end
 
-function v3_add(a,b)
-	return v3(a[1]+b[1], a[2]+b[2], a[3]+b[3])
+function v3_add(ax,ay,az,bx,by,bz)
+ return ax+bx,ay+by,az+bz
 end
 
-function v3_add_s(a,b)
-	return v3(a[1]+b, a[2]+b, a[3]+b)
+function v3_add_s(ax,ay,az,b)
+ return ax+b,ay+b,az+b
 end
 
-function v3_sub(a,b)
-	return v3(a[1]-b[1], a[2]-b[2], a[3]-b[3])
+function v3_sub(ax,ay,az,bx,by,bz)
+ return ax-bx,ay-by,az-bz
 end
 
-function v3_sub_s(a,b)
-	return v3(a[1]-b, a[2]-b, a[3]-b)
+function v3_sub_s(ax,ay,az,b)
+ return ax-b,ay-b,az-b
 end
 
-function v3_mul(a,b)
-	return v3(a[1]*b[1],a[2]*b[2],a[3]*b[3])
+function v3_mul(ax,ay,az,bx,by,bz)
+ return ax*bx,ay*by,az*bz
 end
 
-function v3_mul_s(a, b)
-	return v3( a[1]*b, a[2]*b, a[3]*b )
+function v3_mul_s(ax,ay,az,b)
+ return ax*b,ay*b,az*b
 end
 
-function v3_dot(ax, ay, az, bx, by, bz)
-	return ax * bx + ay * by + az * bz
+function v3_dot(ax,ay,az,bx,by,bz)
+ return ax*bx + ay*by + az*bz
 end
 
-function v3_cross(a, b)
-	return v3( a[2] * b[3] - a[3] * b[2], a[3] * b[1] - a[1] * b[3], a[1] * b[2] - a[2] * b[1] )
+function v3_cross(ax,ay,az,bx,by,bz)
+ return ay*bz - az*by, az*bx - ax*bz, ax*by - ay*bx
 end
 
-function v3_min(a,b)
-	return v3( min(a[1],b[1]), min(a[2],b[2]), min(a[3],b[3]) )
+function v3_min(ax,ay,az,bx,by,bz)
+ return min(ax,bx), min(ay,by), min(az,bz)
 end
 
-function v3_max(a,b)
-	return v3( max(a[1],b[1]), max(a[2],b[2]), max(a[3],b[3]) )
+function v3_max(ax,ay,az,bx,by,bz)
+ return max(ax,bx), max(ay,by), max(az,bz)
 end
 
 function v3_length(x,y,z)
-	return sqrt( v3_dot(a,a) )
-end	
+ return sqrt( v3_dot(x,y,z,x,y,z) )
+end 
 
 function v3_normalize(x,y,z)
  local rl = 1 / v3_length(x,y,z)
-	return x * rl, y * rl, z * rl
-end
-
-function v3_rot_x(a, t)
-	local s = sin(t)
-	local c = cos(t)
-	return v3( a[1], a[2] * c + a[3] * s, a[2] * -s + a[3] * c )	
-end
-
-function v3_rot_y(a, t)
-	local s = sin(t)
-	local c = cos(t)
-	return v3( a[1] * c + a[3] * s, a[2], a[1] * -s + a[3] * c )	
+ return x*rl, y*rl, z*rl
 end
 
 -- plane
-function pl(n,d)
- return { n[1], n[2], n[3], d }
+
+function pl_abc(ax,ay,az,bx,by,bz,cx,cy,cz)
+ local nx,ny,nz = v3_normalize( v3_cross(v3_sub(ax,ay,az, bx,by,bz), v3_sub(cx,cy,cz, bx,by,bz)) )
+ return nx,ny,nz,-v3_dot(nx,ny,nz, ax,ay,az)
 end
 
-function pl_abc(a,b,c)
- local ba = v3_sub(a,b)
- local bc = v3_sub(c,b)
- local cp = v3_cross(ba, bc)
- local nx, ny, nz = v3_normalize( cp[1], cp[2], cp[3] )
- return pl( n, -v3_dot(n, a) )
-end
-
-function pl_dist(p, v)
- return v3_dot(p,v) + p[4]
+function pl_dist(px,py,pz,pd, vx,vy,vz)
+ return px*vx + py*vy + pz*vz + pd
 end
 
 -- matrix
 
-function m3(x,y,z)
-	return {{x[1],x[2],x[3]},{y[1],y[2],y[3]},{z[1],z[2],z[3]}}
-end	
+function m3_unpack(m)
+ return m[1],m[2],m[3], m[4],m[5],m[6], m[7],m[8],m[9]
+end
 
 function m3_id()
-	return {{1,0,0},{0,1,0},{0,0,1}}
-end	
+ return 1,0,0, 0,1,0, 0,0,1
+end 
 
 function m3_get_ax(m)
- return v3(m[1][1], m[2][1], m[3][1])
+ return m[1], m[4], m[7]
 end
 function m3_get_ay(m)
- return v3(m[1][2], m[2][2], m[3][2])
+ return m[2], m[5], m[8]
 end
 
 function m3_get_az(m)
- return v3(m[1][3], m[2][3], m[3][3])
+ return m[3], m[6], m[9]
 end
 
 function m3_rot_x(t)
-	local s = sin(t)
-	local c = cos(t)
-	return m3(v3(1, 0, 0), v3(0, c,  s), v3(0,  -s,  c))
+ local s = sin(t)
+ local c = cos(t)
+ return 1,0,0, 0,c,s, 0,-s,c
 end
 
 function m3_rot_y(t)
-	local s = sin(t)
-	local c = cos(t)
-	return m3(v3(c, 0, -s), v3(0,  1,  0), v3(s,  0,  c))
+ local s = sin(t)
+ local c = cos(t)
+ return c,0,-s, 0,1,0, s,0,c
 end
 
 function m3_rot_z(t)
-	local s = sin(t)
-	local c = cos(t)
-	return m3(v3(c, -s, 0), v3(s,  c, 0), v3(0,  0, 1))
+ local s = sin(t)
+ local c = cos(t)
+ return c,-s,0, s,c,0, 0,0,1
 end
 
-function m3_mul(m1, m2)
-	local r = {}
-	for i=1,3 do
-		r[i] = {}
-		for j=1,3 do
-			local v = m1[i][1] * m2[1][j]
-			for k=2,3 do
-				v += m1[i][k] * m2[k][j]
-			end
-			r[i][j] = v
-		end
-	end
-	return r
+function m3_mul(a11,a12,a13, a21,a22,a23, a31,a32,a33, b11,b12,b13, b21,b22,b23, b31,b32,b33)
+ -- aik * bkj + aik * bkj + aik * bkj
+ return 
+  a11 * b11 + ai2 * b21 + a13 * b31,
+  a11 * b12 + ai2 * b22 + a13 * b32,
+  a11 * b13 + ai2 * b23 + a13 * b33,
+  a21 * b11 + ai2 * b21 + a23 * b31,
+  a21 * b12 + ai2 * b22 + a23 * b32,
+  a21 * b13 + ai2 * b23 + a23 * b33,
+  a31 * b11 + ai2 * b21 + a33 * b31,
+  a31 * b12 + ai2 * b22 + a33 * b32,
+  a31 * b13 + ai2 * b23 + a33 * b33
+end 
+
+function m3_trans(m11,m12,m13, m21,m22,m23, m31,m32,m33)
+ return m11,m21,m31, m12,m22,m32, m13,m23,m33
 end
 
-function m3_trans(m)
-	local r = {}
-	for i=1,3 do
-		r[i] = {}
-		for j=1,3 do
-			r[i][j] = m[j][i]
-		end
-	end
-	return r
-end
 
-function v3_mul_m3(v, m)
-	return v3( v[1] * m[1][1] + v[2] * m[1][2] + v[3] * m[1][3],
-	 v[1] * m[2][1] + v[2] * m[2][2] + v[3] * m[2][3],
-	 v[1] * m[3][1] + v[2] * m[3][2] + v[3] * m[3][3] )
+function v3_mul_m3(vx,vy,vz, m11,m12,m13, m21,m22,m23, m31,m32,m33)
+ return
+  vx * m11 + vy * m12 + vz * m13,
+  vx * m21 + vy * m22 + vz * m23,
+  vx * m31 + vy * m32 + vz * m33
 end
 
 -- rot-trans
 
-function rt_apply(v, rt)
-	--return v3_add( v3_mul_m3(v,rt.r), rt.t)
- local r = rt.r
- local t = rt.t
- return v3( t[1] + v[1] * r[1][1] + v[2] * r[1][2] + v[3] * r[1][3],
-  t[2] + v[1] * r[2][1] + v[2] * r[2][2] + v[3] * r[2][3],
-  t[3] + v[1] * r[3][1] + v[2] * r[3][2] + v[3] * r[3][3] )
+function rt_unpack(rt)
+ return m3_unpack(rt.r), v3_unpack(rt.t)
+end
 
+function rt_apply(vx,vy,vz, r11,r12,r13, r21,r22,r23, r31,r32,r33, tx, ty, tz )
+ return 
+  tx + vx * r11 + vy * r12 + vz * r13,
+  ty + vx * r21 + vy * r22 + vz * r23,
+  tz + vx * r31 + vy * r32 + vz * r33
 end
 
 function rt_mul(rta, rtb)
- local rt = {}
- rt.r = m3_mul(rta.r, rtb.r)
- rt.t = v3_add(rtb.t, v3_mul_m3(rta.t, rtb.r))
- return rt
+ return {
+  r = { m3_mul(m3_unpack(rta.r), m3_unpack(rtb.r)) },
+  t = { v3_add(v3_unpack(rtb.t), v3_mul_m3(v3_unpack(rta.t), m3_unpack(rtb.r))) }
+ }
 end
 
 function rt_inv(rt)
-	local r = m3_trans(rt.r)
-	return { r = r, t = v3_mul_m3( v3_neg(rt.t), r ) }
-end	
+ local r = { m3_trans( m3_unpack(rt.r) ) }
+ return { r=r, t= { v3_mul_m3(v3_neg( v3_unpack(rt.t) ), r ) } }
+end
 
 -- sort
 -- casualeffects heap sort:
@@ -758,13 +756,13 @@ obj_fox = {}
 sys_time = { t=0, dt=1/60, b=60 }
 
 function _init()
- perf_add_counter( "bg" )
- perf_add_counter( "draw" )
- perf_add_counter( "update" )
- perf_add_counter( "vert" )
- perf_add_counter( "tri" )
- perf_add_counter( "shadow" )
- perf_add_counter( "drawlist" )
+ perf_counter( "bg" )
+ perf_counter( "draw" )
+ perf_counter( "update" )
+ perf_counter( "vert" )
+ perf_counter( "tri" )
+ perf_counter( "shadow" )
+ perf_counter( "drawlist" )
  
  perf_reset()
 
@@ -795,36 +793,40 @@ end
 
 function obj_calc_normals()
 	for t in all(obj.tri) do
-		ova = obj.vtx[t[1]]
-		ovb = obj.vtx[t[2]]
-		ovc = obj.vtx[t[3]]
+		local ovax, ovay, ovaz = v3_unpack( obj.vtx[t[1]] )
+		local ovbx, ovby, ovbz = v3_unpack( obj.vtx[t[2]] )
+		local ovcx, ovcy, ovcz = v3_unpack( obj.vtx[t[3]] )
 
-		dab = v3_sub( ovb, ova )
-		dbc = v3_sub( ovc, ovb )
+		local dabx,daby,dabz = v3_sub( ovbx,ovby,ovbz, ovax,ovay,ovaz )
+		local dbcx,dbcy,dbcz = v3_sub( ovcx,ovcy,ovcz, ovbx,ovby,ovbz )
 
-  local cp = v3_cross( dab, dbc )
-		t.nx, t.ny, t.nz = v3_normalize( cp[1], cp[2], cp[3] )	
+  local cpx,cpy,cpz = v3_cross( dabx,daby,dabz, dbcx,dbcy,dbcz )
+		t.n = { v3_normalize( cpx,cpy,cpz )	}
 	end	
 end
 
 function obj_calc_bounds(obj)
 	obj.bounds = {}
 
-	fst = 1
+	fst = true
+
+ local vminx, vminy, vminz
+ local vmaxx, vmaxy, vmaxz
 
 	for v in all(obj.vtx) do
-		if fst == 1 then
-			vmin = v3(v[1], v[2], v[3])
-			vmax = v3(v[1], v[2], v[3])
-			fst = 0
+  local vx,vy,vz = v3_unpack(v)
+		if fst then
+			vminx,vminy,vminz = vx,vy,vz
+   vmaxx,vmaxy,vmaxz = vx,vy,vz
+			fst = false
 		else
-			vmin = v3_min( vmin, v )
-			vmax = v3_max( vmax, v )
+			vminx,vminy,vminz = v3_min( vminx,vminy,vminz, vx,vy,vz )
+   vmaxx,vmaxy,vmaxz = v3_max( vmaxx,vmaxy,vmaxz, vx,vy,vz )
 		end					
 	end
 
-	obj.bounds.c = v3_mul_s( v3_add( vmin, vmax ), .5 )
-	obj.bounds.r = v3_length( v3_sub( vmax, vmin ) ) * .5
+	obj.bounds.c = { v3_mul_s( v3_add( vminx,vminy,vminz, vmaxx,vmaxy,vmaxz ), .5 ) }
+	obj.bounds.r = { v3_length( v3_sub( vmaxx,vmaxy,vmaxz, vminx,vminy,vminz ) ) * .5 }
 end
 
 function obj_finalize(o)
@@ -835,14 +837,14 @@ end
 function obj_make_cube()
 	obj = {}
 	obj.vtx = {
-  v3(-1, -1, -1),
-  v3(1, -1, -1),
-  v3(-1, 1, -1),
-  v3(1, 1, -1),
-  v3(1, -1, 1),
-  v3(-1, -1, 1),
-  v3(1, 1, 1),
-  v3(-1, 1, 1),
+  {-1, -1, -1},
+  {1, -1, -1},
+  {-1, 1, -1},
+  {1, 1, -1},
+  {1, -1, 1},
+  {-1, -1, 1},
+  {1, 1, 1},
+  {-1, 1, 1},
  }
 
 	obj.tri = { 
@@ -874,27 +876,28 @@ end
 
 function obj_make_fox()
  obj = {}
- obj.vtx = {}
+ obj.vtx = {
+{ 0.986111,-0.025855,0.300339 },
+{ -1.005903,-0.025855,0.300340 },
+{ -0.005903,0.000000,-3.763774 },
+{ -0.005903,1.000000,0.300339 },
+{ -0.005903,0.525322,1.004954 },
+{ -1.636132,-0.269847,-0.689093 },
+{ -1.874824,0.244348,0.182332 },
+{ -1.743159,1.274788,1.228072 },
+{ -1.264151,0.050001,0.029176 },
+{ -4.5,-1.035814,1.553706 },
+{ -1.189264,-0.440330,-1.404416 },
+{ -1.015540,0.175132,0.075046 },
+{ 1.851038,0.244348,0.182331 },
+{ 1.240366,0.050001,0.029176 },
+{ 0.991755,0.175132,0.075046 },
+{ 1.612347,-0.269847,-0.689093 },
+{ 4.5,-1.035814,1.553705 },
+{ 1.165478,-0.440330,-1.404416 },
+{ 1.719373,1.274788,1.22807 }
+ }
 
-obj.vtx[1] = v3(0.986111,-0.025855,0.300339)
-obj.vtx[2] = v3(-1.005903,-0.025855,0.300340)
-obj.vtx[3] = v3(-0.005903,0.000000,-3.763774)
-obj.vtx[4] = v3(-0.005903,1.000000,0.300339)
-obj.vtx[5] = v3(-0.005903,0.525322,1.004954)
-obj.vtx[6] = v3(-1.636132,-0.269847,-0.689093)
-obj.vtx[7] = v3(-1.874824,0.244348,0.182332)
-obj.vtx[8] = v3(-1.743159,1.274788,1.228072)
-obj.vtx[9] = v3(-1.264151,0.050001,0.029176)
-obj.vtx[10] = v3(-4.5,-1.035814,1.553706)
-obj.vtx[11] = v3(-1.189264,-0.440330,-1.404416)
-obj.vtx[12] = v3(-1.015540,0.175132,0.075046)
-obj.vtx[13] = v3(1.851038,0.244348,0.182331)
-obj.vtx[14] = v3(1.240366,0.050001,0.029176)
-obj.vtx[15] = v3(0.991755,0.175132,0.075046)
-obj.vtx[16] = v3(1.612347,-0.269847,-0.689093)
-obj.vtx[17] = v3(4.5,-1.035814,1.553705)
-obj.vtx[18] = v3(1.165478,-0.440330,-1.404416)
-obj.vtx[19] = v3(1.719373,1.274788,1.22807)
 
  obj.tri = { 
 {1,4,5,  c=5 }, --cowel left
@@ -1334,8 +1337,8 @@ function draw_floor()
  end
 end
 
-cam_pos = v3(0,1,-10)
-cam_angles = v3(0,0,0)
+cam_pos = {0,1,-10}
+cam_angles = {0,0,0}
 
 function _draw()
   perf_reset()
