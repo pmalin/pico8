@@ -459,7 +459,7 @@ function vs_view_setup( cam_to_world, vp, pdist, win, sc )
  vs.scl = vs.sc.tl[1]
  vs.scr = vs.sc.br[1] - 1
 
- vs.vp.size = v2_sub( vs.vp.br, vs.vp.tl )  
+ vs.vp.size = v2_sub( vs.vp.br, vs.vp.tl )
  vs.vp.rcp_size = v2_rcp( vs.vp.size ) 
 
  vs.win.size = v2_sub( vs.win.br, vs.win.tl )
@@ -644,38 +644,32 @@ function tri( a, b, c, col )
 	line(c[1], c[2], a[1], a[2], col)
 end
 
-function sort_y_3( ax,ay, bx,by, cx,cy )
+function trifill( ax,ay, bx,by, cx,cy, col )
+-- sort vertices
  if ay > by then
   ax,ay,bx,by = bx,by,ax,ay
  end
-
  if by > cy then
   bx,by,cx,cy = cx,cy,bx,by
   if ay > by then
    ax,ay,bx,by = bx,by,ax,ay
   end  
  end
- return ax,ay, bx,by, cx,cy
-end
 
-function trifill( ax,ay, bx,by, cx,cy, col )
-
-	-- sort vertices
- ax,ay,bx,by,cx,cy = sort_y_3( ax,ay, bx,by, cx,cy )
-
+ local sct,scb = vs.sct, vs.scb
  -- ceil and clip y
- ayc = mid( ceil(ay), vs.sct, vs.scb )
- byc = mid( ceil(by), vs.sct, vs.scb )
- cyc = mid( ceil(cy), vs.sct, vs.scb )
+ local ayc = mid( ceil(ay), sct, scb )
+ local byc = mid( ceil(by), sct, scb )
+ local cyc = mid( ceil(cy), sct, scb )
 
  -- init edges
-	dabx_dy = (bx - ax) / (by - ay)
-	dacx_dy = (cx - ax) / (cy - ay)
- dbcx_dy = (cx - bx) / (cy - by)
+	local dabx_dy = (bx - ax) / (by - ay)
+	local dacx_dy = (cx - ax) / (cy - ay)
+ local dbcx_dy = (cx - bx) / (cy - by)
 
-	ab_x = ax + (ayc - ay) * dabx_dy
-	ac_x = ax + (ayc - ay) * dacx_dy
- bc_x = bx + (byc - by) * dbcx_dy
+	local ab_x = ax + (ayc - ay) * dabx_dy
+	local ac_x = ax + (ayc - ay) * dacx_dy
+ local bc_x = bx + (byc - by) * dbcx_dy
 
  byc-=1
 
@@ -1015,8 +1009,9 @@ function obj_draw( obj, obj_to_world, shadow )
 
 
  local tc = #obj.tri
+ local third = 1/3
+ local nr = vs.near
 
-  local third = 1/3
  if not shadow then
   perf_begin("tri")
   for ti=1,tc do
@@ -1025,13 +1020,13 @@ function obj_draw( obj, obj_to_world, shadow )
    local b = scr_vtx[t[2]]
    local c = scr_vtx[t[3]]
 
-   local ax,ay,az = a[1],a[2],a[3]
-   local bx,by,bz = b[1],b[2],b[3]
-   local cx,cy,cz = c[1],c[2],c[3]
+   local ax,ay = a[1],a[2]
+   local bx,by = b[1],b[2]
+   local cx,cy = c[1],c[2]
 
-   local nr = vs.near
    -- backface cull
    if ((bx-ax)*(cy-by)-(by-ay)*(cx-bx)) < 0.0 then
+    local az,bz,cz = a[3], b[3], c[3]
     if az > nr and bz > nr and cz > nr then
 
      local s = mid( v3_dot(obj_ldir, t[5]) * -0.5 + 0.5, 0, 1)
@@ -1054,13 +1049,13 @@ function obj_draw( obj, obj_to_world, shadow )
    local a=scr_vtx[t[1]]
    local b=scr_vtx[t[2]]
    local c=scr_vtx[t[3]]
-   local ax,ay,az = a[1],a[2],a[3]
-   local bx,by,bz = b[1],b[2],b[3]
-   local cx,cy,cz = c[1],c[2],c[3]
+   local ax,ay = a[1],a[2]
+   local bx,by = b[1],b[2]
+   local cx,cy = c[1],c[2]
 
-   local nr = vs.near
    -- backface cull
    if ((bx-ax)*(cy-by)-(by-ay)*(cx-bx)) < 0.0 then
+    local az,bz,cz = a[3], b[3], c[3]
     if az > nr and bz > nr and cz > nr then
      trifill( ax,ay,bx,by,cx,cy, 0 )
     end
