@@ -43,8 +43,8 @@ end
 -- perf
 
 function perf_counter( key )
- if (not perf) return
- perf_counters[key] = { name = key, total = 0, avg = 0 }
+ if (not perf) return 
+ perf_counters[key] = { name = key, index = #perf_counters, total = 0, avg = 0 }
 end
 
 function perf_reset()
@@ -520,6 +520,8 @@ function dl_reset()
 end
 
 function dl_draw()
+ perf_begin("drawlist")
+
  sortlist = {}
 
  --for k,v in pairs(drawlist) do
@@ -534,8 +536,10 @@ function dl_draw()
  for i=1,slc do
   local p = sortlist[i]
   local item = drawlist[p.dl_key]
-  item.fn( item.value )
+  item.fn( item )
  end
+
+ perf_end("drawlist")
 end
 
 
@@ -1042,7 +1046,7 @@ function obj_draw( obj, obj_to_world, shadow )
      local s = mid( v3_dot(obj_ldir, t[5]) * -0.5 + 0.5, 0, 1)
      local d = gfx_dither( t[4], s )  
 
-     add( drawlist, { key=(az + bz + cz) * third, fn = dl_tri, value = {a=a, b=b, c=c, col=d.c, fp=d.f } } )
+     add( drawlist, { key=(az + bz + cz) * third, fn = dl_tri, a=a, b=b, c=c, col=d.c, fp=d.f } )
      --fillp(d.f)
      --trifill( a, b, c, d.c )
    end
@@ -1087,17 +1091,15 @@ function obj_draw( obj, obj_to_world, shadow )
      line(a[1], a[2], b[1], b[2], 0)
     else
      local key = (a[3] + b[3]) / 2
-     add( drawlist, { key=key, fn = dl_line, value = {a=a, b=b, col=l.c } } )
+     add( drawlist, { key=key, fn = dl_line, a=a, b=b, col=l.c } )
     end
    end
   end
  end
 
- if not shadoe then
-  perf_begin("drawlist")
+ if not shadow then
   dl_draw()
   dl_reset()
-  perf_end("drawlist")
  end
 end
 
@@ -1262,23 +1264,6 @@ function vgrad(y0, y1, i0, i1, g)
  end
 end
 
-function scene_draw_background()
-  perf_begin("bg")
-  draw_floor()
-  fillp()
-
-  gfx_3d_grid(6)
-  perf_end("bg")
-end
-
-function scene_draw_obj( scene_obj, bg )
- obj_draw( scene_obj.obj, scene_obj.rt, bg )
-end
-
-function scene_draw_sprite( val, bg ) 
- gfx_3d_sprite( val.wp, val.s.w, val.s.h, val.s.sx, val.s.sy, val.s.sw, val.s.sh )
-end
-
 function draw_floor()
  local d = 1000
  local za = vs.cam_to_world.r[3]
@@ -1354,6 +1339,25 @@ function draw_floor()
   d_xz += d_xz_dy
  end
 end
+
+
+function scene_draw_background()
+  perf_begin("bg")
+  draw_floor()
+  fillp()
+
+  gfx_3d_grid(6)
+  perf_end("bg")
+end
+
+function scene_draw_obj( scene_obj, bg )
+ obj_draw( scene_obj.obj, scene_obj.rt, bg )
+end
+
+function scene_draw_sprite( val, bg ) 
+ gfx_3d_sprite( val.wp, val.s.w, val.s.h, val.s.sx, val.s.sy, val.s.sw, val.s.sh )
+end
+
 
 cam_pos = v3(0,1,-10)
 cam_angles = v3(0,0,0)
