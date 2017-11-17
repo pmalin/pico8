@@ -540,12 +540,16 @@ function dl_tri(v)
    local b=v.b
    local c=v.c
    trifill( a[1],a[2], b[1],b[2], c[1],c[2], v.col )
-end   
+end
 
 function dl_line(v)
    fillp()
    line(v.a[1], v.a[2], v.b[1], v.b[2], v.col)
 end   
+
+function dl_spr(v)
+   gfx_3d_sprite(v.wp, v.s.w, v.s.h, v.s.sx, v.s.sy, v.s.sw, v.s.sh )
+end
 
 
 
@@ -833,6 +837,17 @@ function obj_finalize(o)
 	obj_calc_bounds(o)
 end
 
+spr_def = 
+{
+ w = 0.5,
+ h = 0.5,
+ sx = 40,
+ sy = 0, 
+ sw = 16,
+ sh = 16
+}
+
+
 function obj_make_cube()
 	obj = {}
 	obj.vtx = {
@@ -867,6 +882,10 @@ function obj_make_cube()
   --{ 4, 3, c = 7 },
   --{ 3, 1, c = 7 }
  --}
+
+ obj.spr = {
+  { 0,1.2,0, sp=spr_def },
+ }
 	
 	obj_finalize(obj)
 
@@ -930,6 +949,8 @@ function obj_make_fox()
   --{ 3, 1, c = 7 }
  --}
  
+ obj.spr = {}
+
  obj_finalize(obj)
 
  return obj
@@ -968,6 +989,7 @@ function obj_make_torus(r0, r1, sweepsteps, steps)
  end  
 
  obj.lin = {}
+ obj.spr = {}
  
  obj_finalize(obj)
 
@@ -1039,11 +1061,19 @@ function obj_draw( obj, obj_to_world, shadow )
    end
   end
   perf_end("tri")
+ 
+ local sc = #obj.spr
+  for si=1,sc do
+   local s=obj.spr[si]
+   local wp = rt_apply(s, obj_to_world)
+   add( drawlist, { key=scene_key(wp), fn = dl_spr, wp=wp,s=s.sp } )
+  end
 
  else
   perf_begin("shadow")
   
-  fillp(0b0101101001011010.1)
+  --fillp(0b0101101001011010.1)
+  fillp(0b0100000101000000.1)
   for ti=1,tc do
    local t=obj.tri[ti]
    local a=scr_vtx[t[1]]
@@ -1067,13 +1097,13 @@ function obj_draw( obj, obj_to_world, shadow )
 
  if obj.lin then
   local lc = #obj.lin
+  fillp(0b0100000101000000.1)
   for li=1,lc do
    local l=obj.lin[li]
    local a = scr_vtx[l[1]]
    local b = scr_vtx[l[2]]
    if a[3] > vs.near and b[3] > vs.near then
     if shadow then
-     fillp(0b0101101001011010.1)
      line(a[1], a[2], b[1], b[2], 0)
     else
      local key = -(a[3] + b[3]) / 2
@@ -1169,16 +1199,6 @@ function scene_add_sprite( p, spr_def )
  end
 end
 
-spr_def = 
-{
- w = 0.5,
- h = 0.5,
- sx = 40,
- sy = 0, 
- sw = 16,
- sh = 16
-}
-
 function scene_build()
 
  scene_reset()
@@ -1205,10 +1225,13 @@ function scene_build()
    --gfx_3d_sphere_outline( rt_apply( cube.bounds.c, obj_to_world ), cube.bounds.r )
    -- gfx_3d_sprite( rt_apply( cube.bounds.c, obj_to_world ), cube.bounds.r, cube.bounds.r * 0.75, 8, 0, 16, 16 )
    
-   for z=3,-3,-1 do
-    scene_add_sprite( v3(4,0.5,z * 4), spr_def )
-    --scene_add_sprite( v3(-4,0.5,z * 4), spr_def )
-   end
+    scene_add_sprite( v3(-2,0.5,-2), spr_def )
+    scene_add_sprite( v3( 2,0.5,-2), spr_def )
+    scene_add_sprite( v3(-2,0.5, 2), spr_def )
+    scene_add_sprite( v3( 2,0.5, 2), spr_def )
+   --for z=3,-3,-1 do
+    --scene_add_sprite( v3(4,0.5,z * 4), spr_def )
+   --end
 
    --scene_add_obj( obj_cube, obj_to_world )
    --scene_add_obj( obj_fox, obj_to_world )
