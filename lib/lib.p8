@@ -985,6 +985,9 @@ function obj_make_torus(r0, r1, sweepsteps, steps)
  return obj
 end
 
+function tri_winding(ax,ay, bx,by, cx,cy)
+ return (bx-ax)*(cy-by)-(by-ay)*(cx-bx)
+end
 
 function obj_draw( obj, obj_to_world, shadow )
  vs_set_obj_mat( obj_to_world )
@@ -1027,17 +1030,19 @@ function obj_draw( obj, obj_to_world, shadow )
    local b = scr_vtx[t[2]]
    local c = scr_vtx[t[3]]
 
-   -- backface cull   
-   if v2_cross( v2_sub( b, a ), v2_sub( c, b ) ) < 0.0 then
-    if a[3] > vs.near and b[3] > vs.near and c[3] > vs.near then
+   local ax,ay,az = a[1],a[2],a[3]
+   local bx,by,bz = b[1],b[2],b[3]
+   local cx,cy,cz = c[1],c[2],c[3]
 
-     local col, fp
+   local nr = vs.near
+   -- backface cull
+   if ((bx-ax)*(cy-by)-(by-ay)*(cx-bx)) < 0.0 then
+    if az > nr and bz > nr and cz > nr then
 
-     local ldotn = v3_dot(obj_ldir, t[5])
-     local s = mid( ldotn * -0.5 + 0.5, 0, 1)
+     local s = mid( v3_dot(obj_ldir, t[5]) * -0.5 + 0.5, 0, 1)
      local d = gfx_dither( t[4], s )  
 
-     add( drawlist, { key=(a[3] + b[3] + c[3]) * third, fn = dl_tri, value = {a=a, b=b, c=c, col=d.c, fp=d.f } } )
+     add( drawlist, { key=(az + bz + cz) * third, fn = dl_tri, value = {a=a, b=b, c=c, col=d.c, fp=d.f } } )
      --fillp(d.f)
      --trifill( a, b, c, d.c )
    end
@@ -1051,15 +1056,18 @@ function obj_draw( obj, obj_to_world, shadow )
   fillp(0b0101101001011010.1)
   for ti=1,tc do
    local t=obj.tri[ti]
-   local a = scr_vtx[t[1]]
-   local b = scr_vtx[t[2]]
-   local c = scr_vtx[t[3]]
+   local a=scr_vtx[t[1]]
+   local b=scr_vtx[t[2]]
+   local c=scr_vtx[t[3]]
+   local ax,ay,az = a[1],a[2],a[3]
+   local bx,by,bz = b[1],b[2],b[3]
+   local cx,cy,cz = c[1],c[2],c[3]
 
-   -- near cull
-   if a[3] > vs.near and b[3] > vs.near and c[3] > vs.near then
-    -- backface cull
-    if v2_cross( v2_sub( b, a ), v2_sub( c, b ) ) < 0.0 then
-     trifill( a[1],a[2], b[1],b[2], c[1],c[2], 0 )
+   local nr = vs.near
+   -- backface cull
+   if ((bx-ax)*(cy-by)-(by-ay)*(cx-bx)) < 0.0 then
+    if az > nr and bz > nr and cz > nr then
+     trifill( ax,ay,bx,by,cx,cy, 0 )
     end
    end
   end
