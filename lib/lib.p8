@@ -1117,7 +1117,7 @@ function scene_draw( bg )
  if bg then
   for item in all(scene) do
    if bg then
-    if item.value.bg then item.value.draw(item.value, bg) end
+    if item.bg then item.draw(item, bg) end
    end
   end
  else
@@ -1131,8 +1131,8 @@ function scene_draw( bg )
 
   for p in all(sortlist) do
    local item = scene[p.sc_key]
-   if item.value.fg then 
-    item.value.draw(item.value, bg) 
+   if item.fg then 
+    item.draw(item, bg) 
    end
   end
 
@@ -1166,14 +1166,12 @@ function scene_add_obj( obj, obj_to_world )
   add( scene,
   { 
    key = key, 
-   value = {
-    draw = scene_draw_obj,
-    bg = true,
-    fg = true,   
-    wp = v3(bwc[1], bwc[2], bwc[3]),
-    obj = obj,
-    rt = rt
-   } 
+   draw = scene_draw_obj,
+   bg = true,
+   fg = true,   
+   wp = v3(bwc[1], bwc[2], bwc[3]),
+   obj = obj,
+   rt = rt
   } )
  end
 end
@@ -1186,13 +1184,11 @@ function scene_add_sprite( p, spr_def )
   add( scene,
   { 
    key = key, 
-   value = {
-    draw = scene_draw_sprite,
-    bg = false,
-    fg = true,   
-    wp = v3(p[1], p[2], p[3]),
-    s = spr_def
-   } 
+   draw = scene_draw_sprite,
+   bg = false,
+   fg = true,   
+   wp = v3(p[1], p[2], p[3]),
+   s = spr_def
   } )
  end
 end
@@ -1214,12 +1210,10 @@ function scene_build()
  add( scene,
  { 
   key = -32767, 
-  value = {
-   draw = scene_draw_background,
-   bg = true,
-   fg = false,
-   wp = v3(0,0,0),   
-  } 
+  draw = scene_draw_background,
+  bg = true,
+  fg = false,
+  wp = v3(0,0,0),   
  } )
 
  local y_rot = sys_time.t * 1
