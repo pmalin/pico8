@@ -536,15 +536,12 @@ end
 
 function dl_tri(v)
    fillp(v.fp)
-   local a=v.a
-   local b=v.b
-   local c=v.c
-   trifill( a[1],a[2], b[1],b[2], c[1],c[2], v.col )
+   trifill( v.ax,v.ay,v.bx,v.by,v.cx,v.cy, v.col )
 end
 
 function dl_line(v)
    fillp()
-   line(v.a[1], v.a[2], v.b[1], v.b[2], v.col)
+   line(v.ax, v.ay, v.bx, v.by, v.col)
 end   
 
 function dl_spr(v)
@@ -770,6 +767,7 @@ function _init()
  perf_counter( "bg" )
  perf_counter( "draw" )
  perf_counter( "update" )
+ perf_counter( "scene" )
  perf_counter( "vert" )
  perf_counter( "tri" )
  perf_counter( "shadow" )
@@ -841,6 +839,7 @@ spr_def =
 {
  w = 0.5,
  h = 0.5,
+ d = 0.5,
  sx = 40,
  sy = 0, 
  sw = 16,
@@ -876,12 +875,12 @@ function obj_make_cube()
 		{ 3, 4, 7, 4 },
 	}
 
- --obj.line = {
-  --{ 1, 2, c = 7 },
-  --{ 2, 4, c = 7 },
-  --{ 4, 3, c = 7 },
-  --{ 3, 1, c = 7 }
- --}
+ obj.line = {
+  { 1, 2, c = 7 },
+  { 2, 4, c = 7 },
+  { 4, 3, c = 7 },
+  { 3, 1, c = 7 }
+ }
 
  obj.spr = {
   { 0,1.2,0, sp=spr_def },
@@ -988,7 +987,7 @@ function obj_make_torus(r0, r1, sweepsteps, steps)
   end
  end  
 
- obj.lin = {}
+ obj.line = {}
  obj.spr = {}
  
  obj_finalize(obj)
@@ -1054,9 +1053,7 @@ function obj_draw( obj, obj_to_world, shadow )
      local s = mid( v3_dot(obj_ldir, t[5]) * -0.5 + 0.5, 0, 1)
      local d = gfx_dither( t[4], s )  
 
-     add( drawlist, { key=-(az + bz + cz)*third, fn = dl_tri, a=a, b=b, c=c, col=d.c, fp=d.f } )
-     --fillp(d.f)
-     --trifill( a, b, c, d.c )
+     add( drawlist, { key=-(az + bz + cz)*third, fn = dl_tri, ax=ax,ay=ay, bx=bx, by=by, cx=cx, cy=cy, col=d.c, fp=d.f } )
    end
    end
   end
@@ -1066,7 +1063,7 @@ function obj_draw( obj, obj_to_world, shadow )
   for si=1,sc do
    local s=obj.spr[si]
    local wp = rt_apply(s, obj_to_world)
-   add( drawlist, { key=scene_key(wp), fn = dl_spr, wp=wp,s=s.sp } )
+   add( drawlist, { key=scene_key(wp)+ s.sp.d, fn = dl_spr, wp=wp,s=s.sp } )
   end
 
  else
@@ -1095,11 +1092,11 @@ function obj_draw( obj, obj_to_world, shadow )
 
  end
 
- if obj.lin then
-  local lc = #obj.lin
+ if obj.line then
+  local lc = #obj.line
   fillp(0b0100000101000000.1)
   for li=1,lc do
-   local l=obj.lin[li]
+   local l=obj.line[li]
    local a = scr_vtx[l[1]]
    local b = scr_vtx[l[2]]
    if a[3] > vs.near and b[3] > vs.near then
@@ -1107,7 +1104,7 @@ function obj_draw( obj, obj_to_world, shadow )
      line(a[1], a[2], b[1], b[2], 0)
     else
      local key = -(a[3] + b[3]) / 2
-     add( drawlist, { key=key, fn = dl_line, a=a, b=b, col=l.c } )
+     add( drawlist, { key=key, fn = dl_line, ax=a[1], ay=a[2], bx=b[1], by=b[2], col=l.c } )
     end
    end
   end
@@ -1170,13 +1167,19 @@ function scene_add_obj( obj, obj_to_world )
  rt.r = { {r[1][1], r[1][2], r[1][3]}, {r[2][1], r[2][2], r[2][3]}, {r[3][1], r[3][2], r[3][3]} }
 
  local bwc = rt_apply( obj.bounds.c, obj_to_world ) 
- if vs_cull_sphere( bwc, obj.bounds.r ) then
+ -- shadow project
+ local bwcs = { bwc[1], bwc[2], bwc[3] }
+ bwcs[1] += bwcs[2] * 0.3
+ bwcs[2] = 0.0
+ obj_vis = vs_cull_sphere( bwc, obj.bounds.r )
+ shadow_vis = vs_cull_sphere( bwcs, obj.bounds.r )
+ if shadow_vis or obj_vis then
   add( scene,
   { 
    key = scene_key(bwc), 
    draw = scene_draw_obj,
-   bg = true,
-   fg = true,   
+   bg = shadow_vis,
+   fg = obj_vis,   
    wp = v3(bwc[1], bwc[2], bwc[3]),
    obj = obj,
    rt = rt
@@ -1189,7 +1192,7 @@ function scene_add_sprite( p, spr_def )
  if vs_cull_sphere( p, max_r ) then
   add( scene,
   { 
-   key = scene_key(p), 
+   key = scene_key(p) + spr_def.d, 
    draw = scene_draw_sprite,
    bg = false,
    fg = true,   
@@ -1234,8 +1237,8 @@ function scene_build()
    --end
 
    --scene_add_obj( obj_cube, obj_to_world )
-   --scene_add_obj( obj_fox, obj_to_world )
-   scene_add_obj( obj_torus, obj_to_world )
+   scene_add_obj( obj_fox, obj_to_world )
+   --scene_add_obj( obj_torus, obj_to_world )
  
    for x=2,5 do
      obj_to_world.t[1] = x * 4
@@ -1409,7 +1412,10 @@ if 0 == 0 then
  --rectfill(0,0,127,64, 1)
  --rectfill(0,128,127,64, 3)
 
+ perf_begin("scene")
  scene_build()
+ perf_end("scene")
+
 
  scene_draw( true )
  scene_draw( false )
