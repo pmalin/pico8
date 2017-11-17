@@ -1206,15 +1206,6 @@ function scene_build()
 
  scene_reset()
 
- add( scene,
- { 
-  key = 32767, 
-  draw = scene_draw_background,
-  bg = true,
-  fg = false,
-  wp = v3(0,0,0),   
- } )
-
  local y_rot = sys_time.t * 1
  local x_rot = sys_time.t * 0.234
 
@@ -1337,15 +1328,6 @@ function draw_floor()
 end
 
 
-function scene_draw_background()
-  perf_begin("bg")
-  draw_floor()
-  fillp()
-
-  gfx_3d_grid(6)
-  perf_end("bg")
-end
-
 function scene_draw_obj( scene_obj, bg )
  obj_draw( scene_obj.obj, scene_obj.rt, bg )
 end
@@ -1416,7 +1398,14 @@ if 0 == 0 then
  scene_build()
  perf_end("scene")
 
+ -- draw background & floor
+ perf_begin("bg")
+ draw_floor()
+ fillp()
 
+ gfx_3d_grid(6)
+ perf_end("bg")
+ 
  scene_draw( true )
  scene_draw( false )
 
@@ -1428,6 +1417,7 @@ end
 
  perf_end("draw")
 
+ 
  perf_hud()
 end
 
