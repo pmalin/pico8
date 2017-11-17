@@ -521,25 +521,16 @@ end
 
 function dl_draw()
  perf_begin("drawlist")
-
- sortlist = {}
-
- --for k,v in pairs(drawlist) do
- for i=1,#drawlist do
-  local v = drawlist[i]
-  add(sortlist, {key=-v.key,dl_key=i})
- end
  
- ce_heap_sort(sortlist)
+ ce_heap_sort(drawlist)
 
- local slc = #sortlist
+ local slc = #drawlist
  for i=1,slc do
-  local p = sortlist[i]
-  local item = drawlist[p.dl_key]
+  local item = drawlist[i]
   item.fn( item )
  end
 
- perf_end("drawlist")
+ perf_end("drawlist")  
 end
 
 
@@ -1046,7 +1037,7 @@ function obj_draw( obj, obj_to_world, shadow )
      local s = mid( v3_dot(obj_ldir, t[5]) * -0.5 + 0.5, 0, 1)
      local d = gfx_dither( t[4], s )  
 
-     add( drawlist, { key=(az + bz + cz) * third, fn = dl_tri, a=a, b=b, c=c, col=d.c, fp=d.f } )
+     add( drawlist, { key=-(az + bz + cz)*third, fn = dl_tri, a=a, b=b, c=c, col=d.c, fp=d.f } )
      --fillp(d.f)
      --trifill( a, b, c, d.c )
    end
@@ -1090,7 +1081,7 @@ function obj_draw( obj, obj_to_world, shadow )
      fillp(0b0101101001011010.1)
      line(a[1], a[2], b[1], b[2], 0)
     else
-     local key = (a[3] + b[3]) / 2
+     local key = -(a[3] + b[3]) / 2
      add( drawlist, { key=key, fn = dl_line, a=a, b=b, col=l.c } )
     end
    end
