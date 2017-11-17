@@ -1112,16 +1112,9 @@ function scene_draw( bg )
    end
   end
  else
-  local sortlist = {}
+  ce_heap_sort(scene)
 
-  for k,v in pairs(scene) do
-   add(sortlist, {key=-v.key,sc_key=k})
-  end
-  
-  ce_heap_sort(sortlist)
-
-  for p in all(sortlist) do
-   local item = scene[p.sc_key]
+  for item in all(scene) do
    if item.fg then 
     item.draw(item, bg) 
    end
@@ -1140,7 +1133,7 @@ end
 
 function scene_key(wp)
   local vp = v3_sub(wp, vs.cam_to_world.t)  
-  return v3_dot( vp, vs.cam_z )
+  return -v3_dot( vp, vs.cam_z )
 end  
 
 
@@ -1153,10 +1146,9 @@ function scene_add_obj( obj, obj_to_world )
 
  local bwc = rt_apply( obj.bounds.c, obj_to_world ) 
  if vs_cull_sphere( bwc, obj.bounds.r ) then
-  local key = scene_key(bwc)
   add( scene,
   { 
-   key = key, 
+   key = scene_key(bwc), 
    draw = scene_draw_obj,
    bg = true,
    fg = true,   
@@ -1170,11 +1162,9 @@ end
 function scene_add_sprite( p, spr_def )
  local max_r = max( spr_def.w, spr_def.h )
  if vs_cull_sphere( p, max_r ) then
-  local key = scene_key(p)
-  
   add( scene,
   { 
-   key = key, 
+   key = scene_key(p), 
    draw = scene_draw_sprite,
    bg = false,
    fg = true,   
@@ -1200,7 +1190,7 @@ function scene_build()
 
  add( scene,
  { 
-  key = -32767, 
+  key = 32767, 
   draw = scene_draw_background,
   bg = true,
   fg = false,
