@@ -781,9 +781,36 @@ function _init()
  init_dither()
 end
 
+cam_pos = v3(0,1,-10)
+cam_angles = v3(0,0,0)
+cam_to_world = {}
+
 function update()
  perf_begin("update")
  sys_time_tick()
+
+
+ cam_move = v3(0,0,0)
+ if (btn(4)) then
+  if ( btn(0) )cam_move[1]-=.1
+  if ( btn(1) )cam_move[1]+=.1
+
+  if ( btn(2) )cam_move[3]+=.1
+  if ( btn(3) )cam_move[3]-=.1
+ else
+  if ( btn(0) )cam_angles[2]-=.01
+  if ( btn(1) )cam_angles[2]+=.01
+
+  if ( btn(2) )cam_angles[1]+=.01
+  if ( btn(3) )cam_angles[1]-=.01
+ end
+
+ cam_m = m3_mul( m3_rot_y(cam_angles[2]), m3_rot_x(cam_angles[1]) )
+
+ cam_pos = v3_add( cam_pos, v3_mul_m3(cam_move, cam_m) )
+
+ cam_to_world = { r=cam_m, t= cam_pos }
+
  perf_end("update")
 end
 
@@ -1337,8 +1364,6 @@ function scene_draw_sprite( val, bg )
 end
 
 
-cam_pos = v3(0,1,-10)
-cam_angles = v3(0,0,0)
 
 function _draw()
   perf_reset()
@@ -1355,28 +1380,6 @@ function _draw()
 dl_reset()
 
 
-   cam_move = v3(0,0,0)
-      if (btn(4)) then
-       if ( btn(0) )cam_move[1]-=.1
-       if ( btn(1) )cam_move[1]+=.1
-
-       if ( btn(2) )cam_move[3]+=.1
-       if ( btn(3) )cam_move[3]-=.1
-      else
-       if ( btn(0) )cam_angles[2]-=.01
-       if ( btn(1) )cam_angles[2]+=.01
-
-       if ( btn(2) )cam_angles[1]+=.01
-       if ( btn(3) )cam_angles[1]-=.01
-      end
-
-   cam_m = m3_mul( m3_rot_y(cam_angles[2]), m3_rot_x(cam_angles[1]) )
-
-      cam_pos = v3_add( cam_pos, v3_mul_m3(cam_move, cam_m) )
-
-   cam_to_world =
-    { r=cam_m,
-      t= cam_pos }
       --v3(0,1,-10 - 8. * sin(fr * 0.001)) }
 
    pdist = 1.0
