@@ -745,8 +745,8 @@ function init_dither()
  dither_tables = {}
  for grad in all(gradients) do
   dt = {}
-  for i=0,255 do
-   s = i/255
+  for i=0,127 do
+   s = i/127
    dt[i+1] = gfx_dither_calc(grad,s)
   end
   add(dither_tables, dt)
@@ -755,7 +755,7 @@ end
 
 function gfx_dither( grad, s )
 if grad > 3 then grad = 3 end
- return dither_tables[grad][1 + flr(s * 255)]
+ return dither_tables[grad][1 + flr(s * 127)]
 end
 
 obj_cube = {}
