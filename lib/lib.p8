@@ -1001,27 +1001,27 @@ function obj_make_torus(r0, r1, sweepsteps, steps)
  obj.vtx = {}
  
  for step=0,steps-1 do
-  stept = step / steps
-  v = v3(0, sin(stept) * r1, cos(stept) * r1 + r0)
+  local stept = step / steps
+  local v = v3(0, sin(stept) * r1, cos(stept) * r1 + r0)
 
   for sweep=0,sweepsteps-1 do
-   sweept = sweep / sweepsteps
+   local sweept = sweep / sweepsteps
 
-   idx = step * sweepsteps + sweep + 1
+   local idx = step * sweepsteps + sweep + 1
    obj.vtx[idx] = v3_rot_y(v, sweept)
   end
  end
 
  obj.tri = {}
  for step=0,steps-1 do
-  step1 = (step + 1) % steps
+  local step1 = (step + 1) % steps
   for sweep=0,sweepsteps-1 do
-   sweep1 = (sweep + 1) % sweepsteps
+   local sweep1 = (sweep + 1) % sweepsteps
 
-   i0 = 1+ step * sweepsteps + sweep
-   i1 = 1+ step1 * sweepsteps + sweep
-   i2 = 1+ step1 * sweepsteps + sweep1
-   i3 = 1+ step * sweepsteps + sweep1
+   local i0 = 1+ step * sweepsteps + sweep
+   local i1 = 1+ step1 * sweepsteps + sweep
+   local i2 = 1+ step1 * sweepsteps + sweep1
+   local i3 = 1+ step * sweepsteps + sweep1
    add( obj.tri, {i0, i1, i2, 1 } ) 
    add( obj.tri, {i0, i2, i3, 1 } ) 
   end
@@ -1122,8 +1122,7 @@ function obj_draw( obj, obj_to_world, shadow )
 
    -- backface cull
    if ((bx-ax)*(cy-by)-(by-ay)*(cx-bx)) < 0.0 then
-    local az,bz,cz = a[3], b[3], c[3]
-    if az > nr and bz > nr and cz > nr then
+    if a[3] > nr and b[3] > nr and c[3] > nr then
      trifill( ax,ay,bx,by,cx,cy, 0 )
     end
    end
@@ -1211,8 +1210,8 @@ function scene_add_obj( obj, obj_to_world )
  local bwcs = { bwc[1], bwc[2], bwc[3] }
  bwcs[1] += bwcs[2] * 0.3
  bwcs[2] = 0.0
- obj_vis = vs_cull_sphere( bwc, obj.bounds.r )
- shadow_vis = vs_cull_sphere( bwcs, obj.bounds.r )
+ local obj_vis = vs_cull_sphere( bwc, obj.bounds.r )
+ local shadow_vis = vs_cull_sphere( bwcs, obj.bounds.r )
  if shadow_vis or obj_vis then
   add( scene,
   { 
@@ -1283,7 +1282,7 @@ function vgrad(y0, y1, i0, i1, g)
  local s = i0
  local ds_dy = (i1 - i0) / (y1 - y0)
  for y=y0,y1 do
-  d = gfx_dither( g, s )
+  local d = gfx_dither( g, s )
   fillp(d.f)
   rect(0,y, 127,y, d.c)
 
@@ -1346,7 +1345,7 @@ function draw_floor()
  local d_xz_dy = (vbotd_xz - vtopd_xz) / 128
 
  for y=0,127 do
-  t = cam_h / -d_y
+  local t = cam_h / -d_y
   local c = 2
   local s = 1
   if t > 0 then  
@@ -1357,7 +1356,7 @@ function draw_floor()
    c = 1
    s = (1 - mid( d_y, 0, 1 )) * .8
   end
-  di = gfx_dither( c, s )
+  local di = gfx_dither( c, s )
   fillp(di.f)
 
   rectfill(0,y,127,y,di.c)
@@ -1395,9 +1394,9 @@ dl_reset()
 
       --v3(0,1,-10 - 8. * sin(fr * 0.001)) }
 
-   pdist = 1.0
-   vp = { tl = v2(-1,1), br = v2(1,-1) }
-   win = { tl = v2(0,0), br = v2(128,128) }
+   local pdist = 1.0
+   local vp = { tl = v2(-1,1), br = v2(1,-1) }
+   local win = { tl = v2(0,0), br = v2(128,128) }
    vs_view_setup( cam_to_world, vp, pdist, win )
 
 if 0 == 0 then 
