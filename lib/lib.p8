@@ -57,7 +57,11 @@ function perf_reset()
 end
 
 function perf_timer()
- return 1000 * stat(1) / 60
+ return stat(1)
+end
+
+function perf_to_ms(x)
+ return (x * 1000) / sys_time.fr
 end
 
 function perf_begin( key )
@@ -83,7 +87,7 @@ function perf_draw_timers()
  cursor(0,0)
  color(7)
  for k,c in pairs(perf_counters) do
-  print(c.name .. "[" .. c.count .. "]=" .. (c.total) .. ",".. c.avg)
+  print(c.name .. "[" .. c.count .. "]=" .. perf_to_ms(c.total) .. ",".. perf_to_ms(c.avg))
  end
 end
 
@@ -113,31 +117,31 @@ function v2_tostring(a)
 end
 
 function v2_neg(a)
- return v2(-a[1], -a[2])
+ return {-a[1], -a[2]}
 end
 
 function v2_rcp(a)
- return v2(1/a[1], 1/a[2])
+ return {1/a[1], 1/a[2]}
 end
 
 function v2_add(a,b)
- return v2(a[1]+b[1], a[2]+b[2])
+ return {a[1]+b[1], a[2]+b[2]}
 end
 
 function v2_add_s(a,b)
- return v2(a[1]+b, a[2]+b)
+ return {a[1]+b, a[2]+b}
 end
 
 function v2_sub(a,b)
- return v2(a[1]-b[1], a[2]-b[2])
+ return {a[1]-b[1], a[2]-b[2]}
 end
 
 function v2_mul(a, b)
-	return v2( a[1] * b[1], a[2] * b[2] )
+	return { a[1] * b[1], a[2] * b[2] }
 end
 
 function v2_mul_s(a, b)
-    return v2( a[1] * b, a[2] * b )
+    return { a[1] * b, a[2] * b }
 end
 
 function v2_cross(a,b)
@@ -155,35 +159,35 @@ function v3_tostring(a)
 end
 
 function v3_neg(a)
-	return v3(-a[1], -a[2], -a[3])
+	return {-a[1], -a[2], -a[3]}
 end
 
 function v3_rcp(a)
- return v3(1/a[1], 1/a[2], 1/a[3])
+ return {1/a[1], 1/a[2], 1/a[3]}
 end
 
 function v3_add(a,b)
-	return v3(a[1]+b[1], a[2]+b[2], a[3]+b[3])
+	return {a[1]+b[1], a[2]+b[2], a[3]+b[3]}
 end
 
 function v3_add_s(a,b)
-	return v3(a[1]+b, a[2]+b, a[3]+b)
+	return {a[1]+b, a[2]+b, a[3]+b}
 end
 
 function v3_sub(a,b)
-	return v3(a[1]-b[1], a[2]-b[2], a[3]-b[3])
+	return {a[1]-b[1], a[2]-b[2], a[3]-b[3]}
 end
 
 function v3_sub_s(a,b)
-	return v3(a[1]-b, a[2]-b, a[3]-b)
+	return {a[1]-b, a[2]-b, a[3]-b}
 end
 
 function v3_mul(a,b)
-	return v3(a[1]*b[1],a[2]*b[2],a[3]*b[3])
+	return {a[1]*b[1],a[2]*b[2],a[3]*b[3]}
 end
 
 function v3_mul_s(a, b)
-	return v3( a[1]*b, a[2]*b, a[3]*b )
+	return {a[1]*b, a[2]*b, a[3]*b}
 end
 
 function v3_dot(a, b)
@@ -191,15 +195,15 @@ function v3_dot(a, b)
 end
 
 function v3_cross(a, b)
-	return v3( a[2] * b[3] - a[3] * b[2], a[3] * b[1] - a[1] * b[3], a[1] * b[2] - a[2] * b[1] )
+	return { a[2]*b[3]-a[3]*b[2], a[3]*b[1]-a[1]*b[3], a[1]*b[2]-a[2]*b[1] }
 end
 
 function v3_min(a,b)
-	return v3( min(a[1],b[1]), min(a[2],b[2]), min(a[3],b[3]) )
+	return { min(a[1],b[1]), min(a[2],b[2]), min(a[3],b[3]) }
 end
 
 function v3_max(a,b)
-	return v3( max(a[1],b[1]), max(a[2],b[2]), max(a[3],b[3]) )
+	return { max(a[1],b[1]), max(a[2],b[2]), max(a[3],b[3]) }
 end
 
 function v3_length(a)
@@ -213,13 +217,13 @@ end
 function v3_rot_x(a, t)
 	local s = sin(t)
 	local c = cos(t)
-	return v3( a[1], a[2] * c + a[3] * s, a[2] * -s + a[3] * c )	
+	return { a[1], a[2] * c + a[3] * s, a[2] * -s + a[3] * c }
 end
 
 function v3_rot_y(a, t)
 	local s = sin(t)
 	local c = cos(t)
-	return v3( a[1] * c + a[3] * s, a[2], a[1] * -s + a[3] * c )	
+	return { a[1] * c + a[3] * s, a[2], a[1] * -s + a[3] * c }
 end
 
 -- plane
@@ -231,7 +235,7 @@ function pl_abc(a,b,c)
  local ba = v3_sub(a,b)
  local bc = v3_sub(c,b)
  local n = v3_normalize( v3_cross(ba, bc) )
- return pl( n, -v3_dot(n, a) )
+ return { n[1],n[2],n[3], -v3_dot(n, a) }
 end
 
 function pl_dist(p, v)
@@ -249,32 +253,32 @@ function m3_id()
 end	
 
 function m3_get_ax(m)
- return v3(m[1][1], m[2][1], m[3][1])
+ return {m[1][1], m[2][1], m[3][1]}
 end
 function m3_get_ay(m)
- return v3(m[1][2], m[2][2], m[3][2])
+ return {m[1][2], m[2][2], m[3][2]}
 end
 
 function m3_get_az(m)
- return v3(m[1][3], m[2][3], m[3][3])
+ return {m[1][3], m[2][3], m[3][3]}
 end
 
 function m3_rot_x(t)
 	local s = sin(t)
 	local c = cos(t)
-	return m3(v3(1, 0, 0), v3(0, c,  s), v3(0,  -s,  c))
+	return {{1, 0, 0}, {0, c,  s}, {0,  -s,  c}}
 end
 
 function m3_rot_y(t)
 	local s = sin(t)
 	local c = cos(t)
-	return m3(v3(c, 0, -s), v3(0,  1,  0), v3(s,  0,  c))
+	return {{c, 0, -s}, {0,  1,  0}, {s,  0,  c}}
 end
 
 function m3_rot_z(t)
 	local s = sin(t)
 	local c = cos(t)
-	return m3(v3(c, -s, 0), v3(s,  c, 0), v3(0,  0, 1))
+	return {{c, -s, 0}, {s,  c, 0}, {0,  0, 1}}
 end
 
 function m3_mul(m1, m2)
@@ -304,9 +308,9 @@ function m3_trans(m)
 end
 
 function v3_mul_m3(v, m)
-	return v3( v[1] * m[1][1] + v[2] * m[1][2] + v[3] * m[1][3],
+	return { v[1] * m[1][1] + v[2] * m[1][2] + v[3] * m[1][3],
 	 v[1] * m[2][1] + v[2] * m[2][2] + v[3] * m[2][3],
-	 v[1] * m[3][1] + v[2] * m[3][2] + v[3] * m[3][3] )
+	 v[1] * m[3][1] + v[2] * m[3][2] + v[3] * m[3][3] }
 end
 
 -- rot-trans
@@ -327,9 +331,9 @@ function rt_apply(v, rt)
  local r2 = r[2]
  local r3 = r[3] 
  local t = rt.t
- return v3( t[1] + v[1] * r1[1] + v[2] * r1[2] + v[3] * r1[3],
+ return { t[1] + v[1] * r1[1] + v[2] * r1[2] + v[3] * r1[3],
   t[2] + v[1] * r2[1] + v[2] * r2[2] + v[3] * r2[3],
-  t[3] + v[1] * r3[1] + v[2] * r3[2] + v[3] * r3[3] )
+  t[3] + v[1] * r3[1] + v[2] * r3[2] + v[3] * r3[3] }
 end
 
 function rt_apply_unpacked(vx,vy,vz, r11,r12,r13, r21,r22,r23, r31,r32,r33, tx, ty, tz )
@@ -783,6 +787,12 @@ cam_pos = v3(0,1,-10)
 cam_angles = v3(0,0,0)
 cam_to_world = {}
 
+game = {
+ t = 0,
+ spin = v3(0,0,0),
+ paused = true
+}
+
 function update()
  perf_begin("update")
  sys_time_tick()
@@ -808,6 +818,18 @@ function update()
  cam_pos = v3_add( cam_pos, v3_mul_m3(cam_move, cam_m) )
 
  cam_to_world = { r=cam_m, t= cam_pos }
+
+ if not game.paused then 
+  game.t += sys_time.dt
+ end
+
+ if (btnp(0,1)) then
+  game.paused = not game.paused
+ end
+
+
+ game.spin[1] = game.t * 0.234
+ game.spin[2] = game.t * 1
 
  perf_end("update")
 end
@@ -1177,8 +1199,8 @@ function scene_build()
 
  scene_reset()
 
- local y_rot = sys_time.t * 1
- local x_rot = sys_time.t * 0.234
+ local y_rot = game.spin[2]
+ local x_rot = game.spin[1]
 
  local obj_r1 = m3_rot_y(y_rot)
  local obj_r2 = m3_rot_x(x_rot)
