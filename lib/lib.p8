@@ -754,13 +754,12 @@ function init_dither()
 end
 
 function gfx_dither( grad, s )
-if grad > 3 then grad = 3 end
+ --if grad > 3 then grad = 3 end
  return dither_tables[grad][1 + flr(s * 127)]
 end
 
 obj_cube = {}
 obj_torus = {}
-obj_fox = {}
 sys_time = { t=0, dt=1/60, b=60 }
 
 function _init()
@@ -777,7 +776,6 @@ function _init()
 
 	obj_cube = obj_make_cube()
  obj_torus = obj_make_torus(0.75,0.5, 10, 6)
- obj_fox = obj_make_fox()
  init_dither()
 end
 
@@ -931,71 +929,6 @@ function obj_make_cube()
 	return obj
 end
 
-function obj_make_fox()
- obj = {}
- obj.vtx = {
-  {0.986111,-0.025855,0.300339},
-  {-1.005903,-0.025855,0.300340},
-  {-0.005903,0.000000,-3.763774},
-  {-0.005903,1.000000,0.300339},
-  {-0.005903,0.525322,1.004954},
-  {-1.636132,-0.269847,-0.689093},
-  {-1.874824,0.244348,0.182332},
-  {-1.743159,1.274788,1.228072},
-  {-1.264151,0.050001,0.029176},
-  {-4.5,-1.035814,1.553706},
-  {-1.189264,-0.440330,-1.404416},
-  {-1.015540,0.175132,0.075046},
-  {1.851038,0.244348,0.182331},
-  {1.240366,0.050001,0.029176},
-  {0.991755,0.175132,0.075046},
-  {1.612347,-0.269847,-0.689093},
-  {4.5,-1.035814,1.553705},
-  {1.165478,-0.440330,-1.404416},
-  {1.719373,1.274788,1.22807},
- }
-
-
- obj.tri = { 
-{1,   4, 5,  5 }, --cowel left
-{4,   2, 5,  6 }, --cowel right
-{2,   1, 5,  9 }, --engine
-{2,   4, 3,  7 }, --ship right
-{1,   2, 3,  5 }, --ship bottom
-{4,   1, 3,  6 }, --ship left
-{6,   7, 2,  7 }, --right wing inside
-{10,  7, 6, 6 }, --right wing front --hidden
-{10,  2, 7, 6 }, --right wing top
-{6,   2, 10, 5}, --right wing bottom
-{11,  9, 8, 1},
-{9,   8, 12, 1}, --right spoil top
-{9,  11, 12, 1}, --right spoil side
-{11, 12, 8, 1}, --right spoil front
-{17, 16, 13, 6}, --right wing front
-{18, 19, 14, 1 },
-{14, 19, 15, 1 }, --left spoil top
-{14, 15, 18, 1 }, --left spoil side
-{18, 15, 19, 1 }, --left spoil bottom
-{17,  1, 13, 6 }, --left wing back
-{16, 13, 1, 6 }, 
-{16, 17, 1, 5 } --left wing bottom
- }
-
- --obj.line = {
-  --{ 1, 2, c = 7 },
-  --{ 2, 4, c = 7 },
-  --{ 4, 3, c = 7 },
-  --{ 3, 1, c = 7 }
- --}
- 
- obj.spr = {}
-
- obj_finalize(obj)
-
- return obj
-end
-
-
 function obj_make_torus(r0, r1, sweepsteps, steps)
  obj = {}
  obj.vtx = {}
@@ -1069,14 +1002,15 @@ function obj_draw( obj, obj_to_world, shadow )
  perf_end("vert")
 
 
- local tc = #obj.tri
+ local tri = obj.tri
+ local tc = #tri
  local third = 1/3
  local nr = vs.near
 
  if not shadow then
   perf_begin("tri")
   for ti=1,tc do
-   local t=obj.tri[ti]
+   local t=tri[ti]
    local a = scr_vtx[t[1]]
    local b = scr_vtx[t[2]]
    local c = scr_vtx[t[3]]
@@ -1090,9 +1024,7 @@ function obj_draw( obj, obj_to_world, shadow )
     local az,bz,cz = a[3], b[3], c[3]
     if az > nr and bz > nr and cz > nr then
 
-     local s = mid( v3_dot(obj_ldir, t[5]) * -0.5 + 0.5, 0, 1)
-     local d = gfx_dither( t[4], s )  
-
+     local d = dither_tables[t[4]][flr( mid( v3_dot(obj_ldir, t[5]) * -63 + 64, 1, 127) )]
      add( drawlist, { key=-(az + bz + cz)*third, fn = dl_tri, ax=ax,ay=ay, bx=bx, by=by, cx=cx, cy=cy, col=d.c, fp=d.f } )
    end
    end
@@ -1267,7 +1199,6 @@ function scene_build()
    --end
 
    --scene_add_obj( obj_cube, obj_to_world )
-   --scene_add_obj( obj_fox, obj_to_world )
    scene_add_obj( obj_torus, obj_to_world )
  
    for x=2,5 do
