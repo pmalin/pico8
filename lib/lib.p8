@@ -461,20 +461,16 @@ end
 -- view state
 
 function vs_cull_sphere( o, r )
- local pc = #vs.frustum.planes
- for pi=1,pc do
-  local p=vs.frustum.planes[pi]
+ local fp = vs.frustum.planes
+ local fpc = #fp
+ for pi=1,fpc do
+  local p=fp[pi]
   if (pl_dist(p,o) < -r) then
-    if not (band(dbg,2) == 0) then
-      gfx_3d_sphere_outline( o, r * 2, 8 )
-    end
-
+    --gfx_3d_sphere_outline( o, r * 2, 8 )
    return false
   end
  end 
- if not (band(dbg,2) == 0) then
-  gfx_3d_sphere_outline( o, r, 11 )
- end
+ --gfx_3d_sphere_outline( o, r, 11 )
  return true
 end
 
@@ -1100,8 +1096,11 @@ function obj_draw( obj, obj_to_world, shadow )
     local az,bz,cz = a[3], b[3], c[3]
     if az > nr and bz > nr and cz > nr then
 
-     local d = dither_tables[t[4]][flr( mid( v3_dot(obj_ldir, t[5]) * -63 + 64, 1, 127) )]
-     add( drawlist, { key=-(az + bz + cz)*third, fn = dl_tri, ax=ax,ay=ay, bx=bx, by=by, cx=cx, cy=cy, col=d.c, fp=d.f } )
+     local avgz = (az + bz + cz)*third
+     local fg = 1.0 - (avgz / (10+avgz))
+     local sh = mid( fg * (v3_dot(obj_ldir, t[5]) * -63 + 64), 1, 127)
+     local d = dither_tables[t[4]][flr( sh )]
+     add( drawlist, { key=-avgz, fn = dl_tri, ax=ax,ay=ay, bx=bx, by=by, cx=cx, cy=cy, col=d.c, fp=d.f } )
    end
    end
   end
@@ -1352,15 +1351,15 @@ function draw_floor()
 
  for y=0,127 do
   local t = cam_h / -d_y
-  local c = 2
-  local s = 1
-  if t > 0 then  
-   local xz = d_xz * t * s
+  local c,s
+  if t > 0 and t < 10000 then  
    c = 2
-   s = (1 - mid( 1 / xz, 0, 1)) * .2
+   s = 1.0 - (t / (10+t)) 
+   -- local xz = d_xz * t
+   --s = (1 - mid( 1 / xz, 0, 1)) * .2
   else
    c = 1
-   s = (1 - mid( d_y, 0, 1 )) * .8
+   s = ( mid( d_y, 0, 1 )) * .8
   end
   local di = gfx_dither( c, s )
   fillp(di.f)
@@ -1404,10 +1403,6 @@ if 0 == 0 then
   color(15)
   fillp()
 
- perf_begin("scene")
- scene_build()
- perf_end("scene")
-
  -- draw background & floor
  perf_begin("bg")
  draw_floor()
@@ -1415,28 +1410,32 @@ if 0 == 0 then
 
  gfx_3d_grid(6)
  perf_end("bg")
+
+ perf_begin("scene")
+ scene_build()
+ perf_end("scene")
  
  scene_draw( true )
  scene_draw( false )
 
- fillp()
- gfx_3d_print(v3(0, 4, 0), "hello", 7)
- gfx_3d_line( v3(0,0,0), v3(4, 4, 3), 4)
+ if false then
+   fillp()
+   gfx_3d_print(v3(0, 4, 0), "hello", 7)
+   gfx_3d_line( v3(0,0,0), v3(4, 4, 3), 4)
 
- gfx_3d_sphere_outline( v3(0, 3, 0), 0.5, 4 )
- gfx_3d_sphere_outline( v3(0, 2, 0), 0.5, 4 )
- gfx_3d_sphere_outline( v3(0, 4, 0), 0.5, 4 )
- gfx_3d_sphere_outline( v3(2, 4, 0), 0.5, 4 )
- gfx_3d_sphere_outline( v3(4, 4, 0), 0.5, 4 )
- gfx_3d_sphere_outline( v3(4, 4, 2), 0.5, 4 )
- gfx_3d_sphere_outline( v3(4, 4, 3), 0.5, 4 )
-
+   gfx_3d_sphere_outline( v3(0, 3, 0), 0.5, 4 )
+   gfx_3d_sphere_outline( v3(0, 2, 0), 0.5, 4 )
+   gfx_3d_sphere_outline( v3(0, 4, 0), 0.5, 4 )
+   gfx_3d_sphere_outline( v3(2, 4, 0), 0.5, 4 )
+   gfx_3d_sphere_outline( v3(4, 4, 0), 0.5, 4 )
+   gfx_3d_sphere_outline( v3(4, 4, 2), 0.5, 4 )
+   gfx_3d_sphere_outline( v3(4, 4, 3), 0.5, 4 )
+ end
 end
 
  perf_end("draw")
 
- 
- --perf_hud()
+ perf_hud()
 end
 
 __gfx__
