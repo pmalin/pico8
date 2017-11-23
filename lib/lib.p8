@@ -786,19 +786,26 @@ gradients = {
  {0x0, 0x2, 0x4, 0x9, 0xa, 0x7},  --yellow
  {0x0, 0x1, 0x3, 0xb, 0x7}, -- green
  {0x0, 0x1, 0xc, 0x7}, -- blue
- {0x0, 0x2, 0x8, 0xe, 0x7}  -- red
+ {0x0, 0x2, 0x8, 0xe, 0x7},  -- red
+ {0xb, 0x3, 0x1, 0x0}, -- ground (col to black)
+ {0x0, 0x1, 0x2, 0x4, 0x9, 0xa }, -- sky
 }
 
 dither_tables = {}
 
+function init_dither_table(grad)
+  local dt = {}
+  for i=0,127 do
+   local s = i/127
+   dt[i+1] = gfx_dither_calc(grad,s)
+  end
+  return dt
+end
+
 function init_dither()
  dither_tables = {}
  for grad in all(gradients) do
-  dt = {}
-  for i=0,127 do
-   s = i/127
-   dt[i+1] = gfx_dither_calc(grad,s)
-  end
+  local dt = init_dither_table(grad)
   add(dither_tables, dt)
  end
 end
@@ -1349,17 +1356,18 @@ function draw_floor()
  local d_y_dy = (vbotd_y - vtopd_y) / 128
  local d_xz_dy = (vbotd_xz - vtopd_xz) / 128
 
+ cam_h = -cam_h
  for y=0,127 do
-  local t = cam_h / -d_y
+  local t = cam_h / d_y
   local c,s
   if t > 0 and t < 10000 then  
-   c = 2
-   s = 1.0 - (t / (10+t)) 
+   c = 5
+   s = t / (10+t) 
    -- local xz = d_xz * t
    --s = (1 - mid( 1 / xz, 0, 1)) * .2
   else
-   c = 1
-   s = ( mid( d_y, 0, 1 )) * .8
+   c = 6
+   s = mid( d_y, 0, 1 )
   end
   local di = gfx_dither( c, s )
   fillp(di.f)
