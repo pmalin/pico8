@@ -1303,23 +1303,6 @@ function vgrad(y0, y1, i0, i1, g)
 end
 
 function draw_floor()
- local d = 1000
- local za = vs.cam_to_world.r[3]
- local z = v3(za[1],za[2],za[3])
- z[2] = 0
- z = v3_normalize(z)
- pw = v3_add(v3_mul_s(z,d), vs.cam_to_world.t)
- pw[2] = 0
- 
- local vv = rt_apply( pw, vs.world_to_cam )
- vv = vs_view_to_screen( vv )
-
- y = vv[2]
- --if ( y <= 127 ) rectfill(0,0,127,y,1)
- --if ( y > 0 ) rectfill(0,y,127,127,3)
- --light = 0
- --vgrad(0,y, 0.6 + light * 0.3, 0.1 + light * 0.05 , 1 )
- --vgrad(y+1, 127, 0.1 + light * 0.05, 0.6+ light * 0.2, 2 )
 
  local vcam = v3(0,0,0)
  local vtop = v3(0,vs.vp.tl[2], vs.pdist )
@@ -1352,9 +1335,9 @@ function draw_floor()
  --z = oz + dz * (y - oy) / dy
 
  local d_y = vtopd_y
- local d_xz = vtopd_xz
+ --local d_xz = vtopd_xz
  local d_y_dy = (vbotd_y - vtopd_y) / 128
- local d_xz_dy = (vbotd_xz - vtopd_xz) / 128
+ --local d_xz_dy = (vbotd_xz - vtopd_xz) / 128
 
  cam_h = -cam_h
  for y=0,127 do
@@ -1375,7 +1358,7 @@ function draw_floor()
   rectfill(0,y,127,y,di.c)
   
   d_y += d_y_dy
-  d_xz += d_xz_dy
+  --d_xz += d_xz_dy
  end
 end
 
