@@ -2,7 +2,7 @@ pico-8 cartridge // http://www.pico-8.com
 version 14
 __lua__
 
-dbg = 0
+dbg = 2
 perf = true
 
 perf_counters = {}
@@ -253,14 +253,14 @@ function m3_id()
 end	
 
 function m3_get_ax(m)
- return {m[1][1], m[2][1], m[3][1]}
+ return {m[1][1], m[1][2], m[1][3]}
 end
 function m3_get_ay(m)
- return {m[1][2], m[2][2], m[3][2]}
+ return {m[2][1], m[2][2], m[2][3]}
 end
 
 function m3_get_az(m)
- return {m[1][3], m[2][3], m[3][3]}
+ return {m[3][1], m[3][2], m[3][3]}
 end
 
 function m3_rot_x(t)
@@ -308,9 +308,10 @@ function m3_trans(m)
 end
 
 function v3_mul_m3(v, m)
-	return { v[1] * m[1][1] + v[2] * m[1][2] + v[3] * m[1][3],
-	 v[1] * m[2][1] + v[2] * m[2][2] + v[3] * m[2][3],
-	 v[1] * m[3][1] + v[2] * m[3][2] + v[3] * m[3][3] }
+	return { 
+   v[1] * m[1][1] + v[2] * m[2][1] + v[3] * m[3][1],
+	 v[1] * m[1][2] + v[2] * m[2][2] + v[3] * m[3][2],
+	 v[1] * m[1][3] + v[2] * m[2][3] + v[3] * m[3][3] }
 end
 
 -- rot-trans
@@ -331,21 +332,22 @@ function rt_apply(v, rt)
  local r2 = r[2]
  local r3 = r[3] 
  local t = rt.t
- return { t[1] + v[1] * r1[1] + v[2] * r1[2] + v[3] * r1[3],
-  t[2] + v[1] * r2[1] + v[2] * r2[2] + v[3] * r2[3],
-  t[3] + v[1] * r3[1] + v[2] * r3[2] + v[3] * r3[3] }
+ return { 
+  t[1] + v[1] * r1[1] + v[2] * r2[1] + v[3] * r3[1],
+  t[2] + v[1] * r1[2] + v[2] * r2[2] + v[3] * r3[2],
+  t[3] + v[1] * r1[3] + v[2] * r2[3] + v[3] * r3[3] }
 end
 
 function rt_apply_unpacked(vx,vy,vz, r11,r12,r13, r21,r22,r23, r31,r32,r33, tx, ty, tz )
  return 
-  tx + vx * r11 + vy * r12 + vz * r13,
-  ty + vx * r21 + vy * r22 + vz * r23,
-  tz + vx * r31 + vy * r32 + vz * r33
+  tx + vx * r11 + vy * r21 + vz * r31,
+  ty + vx * r12 + vy * r22 + vz * r32,
+  tz + vx * r13 + vy * r23 + vz * r33
 end
 
 function rt_mul(rta, rtb)
  local rt = {}
- rt.r = m3_mul(rtb.r, rta.r)
+ rt.r = m3_mul(rta.r, rtb.r)
  rt.t = v3_add(rtb.t, v3_mul_m3(rta.t, rtb.r))
  return rt
 end
@@ -354,6 +356,49 @@ function rt_inv(rt)
 	local r = m3_trans(rt.r)
 	return { r = r, t = v3_mul_m3( v3_neg(rt.t), r ) }
 end	
+
+function math_test()
+  cls()
+
+  local a = v3(1,0,0)
+  local m = m3( v3(0,1,0), v3(0,0,1), v3(1,0,0))
+
+  local v = v3_mul_m3(a,m)
+
+  print("math test")
+  print(v3_tostring(v))
+
+  local ra = m3_rot_x(0.25)
+  local ta = v3(0.2, 0.3, 0.4)
+  local rta = { r = ra, t = ta }
+
+  local rb = m3_rot_y(0.25)
+  local tb = v3(0.5, 0.6, 0.8)
+  local rtb = { r = rb, t = tb }
+
+  local v = v3(0.1, 0.2, 0.3)
+
+  print "manual vs rt"
+  local r1a = v3_add( v3_mul_m3(v, ra), ta )
+  local r1b = rt_apply( v, rta )
+  print(v3_tostring(r1a))
+  print(v3_tostring(r1b))
+
+  print "mtx mul"
+  local mra = v3_mul_m3( v3_mul_m3( v, ra ), rb )
+  local mab = m3_mul( ra, rb )
+  local mrb = v3_mul_m3( v, mab )
+  print(v3_tostring(mra))
+  print(v3_tostring(mrb))
+  print "rt mul"
+
+  local r2a = v3_add( v3_mul_m3(r1a, rb), tb)
+  print(v3_tostring(r2a))
+
+  local rtab = rt_mul( rta, rtb )
+  local r2b = rt_apply( v, rtab )
+  print(v3_tostring(r2b))
+end
 
 -- sort
 -- casualeffects heap sort:
@@ -420,11 +465,16 @@ function vs_cull_sphere( o, r )
  for pi=1,pc do
   local p=vs.frustum.planes[pi]
   if (pl_dist(p,o) < -r) then
-   --gfx_3d_sphere_outline( o, r * 2, 8 )
+    if not (band(dbg,2) == 0) then
+      gfx_3d_sphere_outline( o, r * 2, 8 )
+    end
+
    return false
   end
  end 
- --gfx_3d_sphere_outline( o, r, 11 )
+ if not (band(dbg,2) == 0) then
+  gfx_3d_sphere_outline( o, r, 11 )
+ end
  return true
 end
 
@@ -484,7 +534,7 @@ function vs_set_obj_mat( obj_to_world )
 
    local world_to_shadow = 
    {
-    r = { v3(1,0.3,0), v3(0,0,0), v3(0,0,1) },
+    r = { v3(1,0.0,0), v3(0.3,0,0), v3(0,0,1) },
     t = v3(0,0,0)
    }
    vs.obj_to_cam_shadow = rt_mul( rt_mul( obj_to_world, world_to_shadow ), vs.world_to_cam )
@@ -806,14 +856,14 @@ function update()
   if ( btn(2) )cam_move[3]+=.1
   if ( btn(3) )cam_move[3]-=.1
  else
-  if ( btn(0) )cam_angles[2]-=.01
-  if ( btn(1) )cam_angles[2]+=.01
+  if ( btn(0) )cam_angles[2]+=.01
+  if ( btn(1) )cam_angles[2]-=.01
 
-  if ( btn(2) )cam_angles[1]+=.01
-  if ( btn(3) )cam_angles[1]-=.01
+  if ( btn(2) )cam_angles[1]-=.01
+  if ( btn(3) )cam_angles[1]+=.01
  end
 
- cam_m = m3_mul( m3_rot_y(cam_angles[2]), m3_rot_x(cam_angles[1]) )
+ cam_m = m3_mul( m3_rot_x(cam_angles[1]), m3_rot_y(cam_angles[2]) )
 
  cam_pos = v3_add( cam_pos, v3_mul_m3(cam_move, cam_m) )
 
@@ -995,6 +1045,10 @@ function tri_winding(ax,ay, bx,by, cx,cy)
 end
 
 function obj_draw( obj, obj_to_world, shadow )
+ if not shadow then
+  dl_reset()
+ end
+
  vs_set_obj_mat( obj_to_world )
 
 	local scr_vtx = {}
@@ -1105,7 +1159,6 @@ function obj_draw( obj, obj_to_world, shadow )
 
  if not shadow then
   dl_draw()
-  dl_reset()
  end
 end
 
@@ -1329,38 +1382,27 @@ function scene_draw_sprite( val, bg )
 end
 
 
-
 function _draw()
   perf_reset()
   perf_begin("draw")
 
 	--cls()
-
 	--map(0,0, 0,0, 16,16)
+	--trifill( v2(10, 30), v2(50, 40), v2(25, 100), 0x1111 )
 
-	-- trifill( v2(10, 30), v2(50, 40), v2(25, 100), 0x1111 )
+  local pdist = 1.0
+  local vp = { tl = v2(-1,1), br = v2(1,-1) }
+  local win = { tl = v2(0,0), br = v2(128,128) }
+  vs_view_setup( cam_to_world, vp, pdist, win )
 
--- drawlist
-
-dl_reset()
-
-
-      --v3(0,1,-10 - 8. * sin(fr * 0.001)) }
-
-   local pdist = 1.0
-   local vp = { tl = v2(-1,1), br = v2(1,-1) }
-   local win = { tl = v2(0,0), br = v2(128,128) }
-   vs_view_setup( cam_to_world, vp, pdist, win )
+if 0 == 1 then
+ math_test()
+end
 
 if 0 == 0 then 
 	
-	color(15)
- fillp()
-
-
-
- --rectfill(0,0,127,64, 1)
- --rectfill(0,128,127,64, 3)
+  color(15)
+  fillp()
 
  perf_begin("scene")
  scene_build()
@@ -1377,16 +1419,24 @@ if 0 == 0 then
  scene_draw( true )
  scene_draw( false )
 
+ fillp()
+ gfx_3d_print(v3(0, 4, 0), "hello", 7)
+ gfx_3d_line( v3(0,0,0), v3(4, 4, 3), 4)
 
- --gfx_3d_print(v3(0, 4, 0), "hello", 7)
+ gfx_3d_sphere_outline( v3(0, 3, 0), 0.5, 4 )
+ gfx_3d_sphere_outline( v3(0, 2, 0), 0.5, 4 )
+ gfx_3d_sphere_outline( v3(0, 4, 0), 0.5, 4 )
+ gfx_3d_sphere_outline( v3(2, 4, 0), 0.5, 4 )
+ gfx_3d_sphere_outline( v3(4, 4, 0), 0.5, 4 )
+ gfx_3d_sphere_outline( v3(4, 4, 2), 0.5, 4 )
+ gfx_3d_sphere_outline( v3(4, 4, 3), 0.5, 4 )
 
-   --gfx_3d_line( v3(0,0,0), v3(3, 0, 0), 4)
 end
 
  perf_end("draw")
 
  
- perf_hud()
+ --perf_hud()
 end
 
 __gfx__
