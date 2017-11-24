@@ -777,7 +777,8 @@ function gfx_dither_calc( grad, s )
    local col = c1 + c2 * 16 
 
    local dc = #dither_patterns
-   local fp = dither_patterns[ mid( 1 + flr( g_f * (dc-1) ), 1, dc ) ]
+   local di = flr( g_f * (dc-1) )
+   local fp = dither_patterns[ mid( 1 + di, 1, dc ) ]
 
    return {c = col, f = fp }
 end
@@ -839,6 +840,7 @@ end
 cam_pos = v3(0,1,-10)
 cam_angles = v3(0,0,0)
 cam_to_world = {}
+cam_odometer = 0
 
 game = {
  t = 0,
@@ -871,6 +873,9 @@ function update()
  cam_pos = v3_add( cam_pos, v3_mul_m3(cam_move, cam_m) )
 
  cam_to_world = { r=cam_m, t= cam_pos }
+
+ -- todo, use delta projected onto world xz
+ cam_odometer += cam_move[3]
 
  if not game.paused then 
   game.t += sys_time.dt
@@ -1335,9 +1340,13 @@ function draw_floor()
  --z = oz + dz * (y - oy) / dy
 
  local d_y = vtopd_y
- --local d_xz = vtopd_xz
+ local d_xz = vtopd_xz
  local d_y_dy = (vbotd_y - vtopd_y) / 128
- --local d_xz_dy = (vbotd_xz - vtopd_xz) / 128
+ local d_xz_dy = (vbotd_xz - vtopd_xz) / 128
+
+ --fd = v3_normalize( v3(vs.cam_z[1], 0, vs.cam_z[3] ) )
+ --sh = fd[3] * 0.5 + 0.5
+ sh = 1
 
  cam_h = -cam_h
  for y=0,127 do
@@ -1346,19 +1355,20 @@ function draw_floor()
   if t > 0 and t < 10000 then  
    c = 5
    s = t / (10+t) 
+   if (flr(d_xz * t + cam_odometer)%10<5) s *= .5
    -- local xz = d_xz * t
    --s = (1 - mid( 1 / xz, 0, 1)) * .2
   else
    c = 6
    s = mid( d_y, 0, 1 )
   end
-  local di = gfx_dither( c, s )
+  local di = gfx_dither( c, s * sh )
   fillp(di.f)
 
   rectfill(0,y,127,y,di.c)
   
   d_y += d_y_dy
-  --d_xz += d_xz_dy
+  d_xz += d_xz_dy
  end
 end
 
@@ -1375,6 +1385,8 @@ end
 function _draw()
   perf_reset()
   perf_begin("draw")
+
+ init_dither()
 
 	--cls()
 	--map(0,0, 0,0, 16,16)
