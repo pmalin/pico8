@@ -585,12 +585,10 @@ end
 
 
 function dl_tri(v)
-   --fillp(v.fp)
    trifill( v.ax,v.ay,v.bx,v.by,v.cx,v.cy, v.col )
 end
 
 function dl_line(v)
-   fillp()
    line(v.ax, v.ay, v.bx, v.by, v.col)
 end   
 
@@ -632,7 +630,7 @@ function gfx_3d_line( a, b, col )
   local as = vs_view_to_screen( ac )
   local bs = vs_view_to_screen( bc )
   
-  gfx_line(as, bs, col)
+  line(as[1], as[2], bs[1], bs[2], col)
 end 
 
 function gfx_3d_grid( col )
@@ -743,28 +741,9 @@ end
 
 -- fillp dither patterns
 
---dither_patterns = {
---0b0000000000000000,
---0b0000000000100000,
---0b1000000000100000,
---0b1001000000100000,
---0b1001000000100100,
---0b1001010000100100,
---0b1011010000100100,
---0b1001010010100100,
---0b1011010010100100,
---0b1011010011100100,
---0b1011011011100100,
---0b1011011011101100,
---0b1011011011111100,
---0b1011011011111101,
---0b1111011011111101,
---0b1111011111111101,
---0b1111011111111111
---}
---dither_patterns = {0,1,3,7,15,31,63,127,255,511,1023,2047,4095,8191,16383}
 dither_patterns = {0,32,36,16420,18468,18532,18788,18796,22892,23020,23532,31724,31725,32749,65517}
 
+shadowcol = 0x1100 + 0b.0100000101000000
 
 function gfx_dither_calc( grad, s )
    local gc = #grad
@@ -980,7 +959,7 @@ function obj_make_cube()
   {-1, 1, 1},
  }
 
-	obj.tri = { 
+	obj.tri = {
 		{ 1, 2, 3, 1 },
 		{ 2, 4, 3, 1 },
 		{ 5, 6, 7, 1 },
@@ -996,10 +975,10 @@ function obj_make_cube()
 	}
 
  obj.line = {
-  { 1, 2, c = 7 },
-  { 2, 4, c = 7 },
-  { 4, 3, c = 7 },
-  { 3, 1, c = 7 }
+  { 1, 2, c = 0x1000 + 7 },
+  { 2, 4, c = 0x1000 + 7 },
+  { 4, 3, c = 0x1000 + 7 },
+  { 3, 1, c = 0x1000 + 7 }
  }
 
  obj.spr = {
@@ -1090,7 +1069,6 @@ function obj_draw( obj, obj_to_world, shadow )
 
  perf_end("vert")
 
-
  local tri = obj.tri
  local tc = #tri
  local third = 1/3
@@ -1133,8 +1111,6 @@ function obj_draw( obj, obj_to_world, shadow )
  else
   perf_begin("shadow")
   
-  --fillp(0b0101101001011010.1)
-  fillp(0b0100000101000000.1)
   for ti=1,tc do
    local t=obj.tri[ti]
    local a=scr_vtx[t[1]]
@@ -1147,7 +1123,7 @@ function obj_draw( obj, obj_to_world, shadow )
    -- backface cull
    if ((bx-ax)*(cy-by)-(by-ay)*(cx-bx)) < 0.0 then
     if a[3] > nr and b[3] > nr and c[3] > nr then
-     trifill( ax,ay,bx,by,cx,cy, 0 )
+     trifill( ax,ay,bx,by,cx,cy, shadowcol )
     end
    end
   end
@@ -1157,14 +1133,13 @@ function obj_draw( obj, obj_to_world, shadow )
 
  if obj.line then
   local lc = #obj.line
-  fillp(0b0100000101000000.1)
   for li=1,lc do
    local l=obj.line[li]
    local a = scr_vtx[l[1]]
    local b = scr_vtx[l[2]]
    if a[3] > vs.near and b[3] > vs.near then
     if shadow then
-     line(a[1], a[2], b[1], b[2], 0)
+     line(a[1], a[2], b[1], b[2], shadowcol)
     else
      local key = -(a[3] + b[3]) / 2
      add( drawlist, { key=key, fn = dl_line, ax=a[1], ay=a[2], bx=b[1], by=b[2], col=l.c } )
@@ -1189,6 +1164,7 @@ end
 
 
 function scene_draw( bg )
+
  if bg then
   for item in all(scene) do
    if bg then
