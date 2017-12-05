@@ -13,10 +13,6 @@ perf_counters = {}
 
 -- misc
 
-function ceil(num)
- return flr(num+0x0.ffff)
-end
-
 function min3(a,b,c)
  return min(a, min(b,c))
 end
@@ -86,8 +82,12 @@ function perf_draw_timers()
  if (not perf) return
  cursor(0,0)
  color(7)
+ local y = 0
  for k,c in pairs(perf_counters) do
-  print(c.name .. "[" .. c.count .. "]=" .. perf_to_ms(c.total) .. ",".. perf_to_ms(c.avg))
+  local s = c.name .. "[" .. c.count .. "]=" .. perf_to_ms(c.total) .. ",".. perf_to_ms(c.avg)
+  print(s, 1, y+1,0)
+  print(s, 0, y,7)
+  y+=7
  end
 end
 
