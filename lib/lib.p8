@@ -800,6 +800,7 @@ end
 
 obj_cube = {}
 obj_torus = {}
+obj_ship = {}
 sys_time = { t=0, dt=1/60, b=60 }
 
 function _init()
@@ -818,6 +819,7 @@ function _init()
 
 	obj_cube = obj_make_cube()
  obj_torus = obj_make_torus(0.75,0.5, 10, 6)
+ obj_ship = obj_make_ship()
  init_dither()
 end
 
@@ -946,6 +948,17 @@ spr_def_light =
  sh = 8
 }
 
+spr_def_engine = 
+{
+ w = 0.1,
+ h = 0.1,
+ d = 0.1,
+ sx = 72,
+ sy = 0, 
+ sw = 8,
+ sh = 8
+}
+
 function obj_make_cube()
 	obj = {}
 	obj.vtx = {
@@ -991,6 +1004,72 @@ function obj_make_cube()
 	obj_finalize(obj)
 
 	return obj
+end
+
+function obj_make_ship()
+  obj = {}
+  obj.vtx = {
+  {-.2, 0, 1},
+  {.2, 0, 1},
+  {.8, 0, -1},
+  {.4, .3, -.4},
+  {-.4, .3, -.4},
+  {-.8, 0, -1},
+
+  {.4, .1, -.8},
+  {-.4, .1, -.8},
+
+  {-1, 0, -.9},
+  {-.9, .2, -.6},
+  {-.9, 0, .5},
+
+  { 1, 0, -.9},
+  { .9, .2, -.6},
+  { .9, 0, .5},
+
+  {-.18, 0, 1.1},
+  {.18, 0, 1.1},
+ }
+
+  obj.tri = {
+    { 2, 1, 5, 3 },
+    { 4, 2, 5, 3 },
+    { 5, 1, 6, 1 },
+    { 3, 2, 4, 1 },
+    { 5, 6, 8, 4 },
+    { 4, 5, 8, 4 },
+    { 7, 4, 8, 4 },
+    { 3, 4, 7, 4 },
+
+    { 6,1, 8, 2 },
+    { 8,1, 2, 2 },
+    { 8,2, 7, 2 },
+    { 7,2, 3, 2 },
+
+    { 9, 6, 10, 4 },
+    { 10, 6, 11, 1 },
+    { 9, 10, 11, 1 },
+    { 9, 11, 6, 1 },
+
+    { 13,3,  12, 4 },
+    { 3, 13, 14, 1 },
+    { 3, 14, 12, 1 },
+    { 13, 12, 14, 1 },
+   }
+
+ obj.line = {
+  { 1, 15, c = 0x1000 + 7 },
+  { 2, 16, c = 0x1000 + 7 },
+  { 10, 11, c = 0x1000 + 7 },
+  { 13, 14, c = 0x1000 + 7 },
+ }
+
+ obj.spr = {
+  { -.4,.15,-.8, sp=spr_def_engine },
+  { .4,.15,-.8, sp=spr_def_engine },
+ }
+  obj_finalize(obj)
+  return obj
 end
 
 function obj_make_torus(r0, r1, sweepsteps, steps)
@@ -1266,7 +1345,8 @@ function scene_build()
    --end
 
    --scene_add_obj( obj_cube, obj_to_world )
-   scene_add_obj( obj_torus, obj_to_world )
+   --scene_add_obj( obj_torus, obj_to_world )
+   scene_add_obj( obj_ship, obj_to_world )
  
    for x=2,5 do
      obj_to_world.t[1] = x * 4
@@ -1332,7 +1412,7 @@ function draw_floor()
  for y=0,127 do
   local t = cam_h / d_y
   local c,s
-  if t > 0 and t < 10000 then  
+  if t > 0 and t < 10000 then
    c = 5
    s = t*d_xz / (10+t*d_xz) 
    if (flr(d_xz * t + cam_odometer)%10<5) s *= .5
