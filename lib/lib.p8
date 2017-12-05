@@ -804,11 +804,61 @@ obj_ship = {}
 sys_time = { t=0, dt=1/60, b=60 }
 
 player_ship = {}
+fly_cam = {}
 
-function ship_init( sh )
-  sh.init = ship_init
-  sh.update = ship_update
-  sh.add_scene = ship_add_scene
+function spawn_fly_cam()
+  self = { update = fly_cam_update }
+
+  self.cam_angles = v3(0,0,0)
+  self.rt = { r = m3_id(), t = v3(0,1,-10) }
+  return self
+end
+
+function fly_cam_update( self )
+  if not game.flycam then
+    return
+  end
+  local cam_move = v3(0,0,0)
+   
+   if (btn(4)) then
+    if ( btn(0) )cam_move[1]-=.1
+    if ( btn(1) )cam_move[1]+=.1
+
+    if ( btn(2) )cam_move[3]+=.1
+    if ( btn(3) )cam_move[3]-=.1
+   else
+    if ( btn(0) )self.cam_angles[2]+=.01
+    if ( btn(1) )self.cam_angles[2]-=.01
+
+    if ( btn(2) )self.cam_angles[1]-=.01
+    if ( btn(3) )self.cam_angles[1]+=.01
+   end
+
+   local xr = self.cam_angles[1]
+   local yr = self.cam_angles[2]
+   self.rt.r = m3_mul( m3_rot_x(xr), m3_rot_y(yr) )
+
+   self.rt.t = v3_add( self.rt.t, v3_mul_m3(cam_move, self.rt.r) )
+end
+
+function spawn_chase_cam()
+  self = { update = update_chase_cam }
+  self.rt = { r = m3_id(), t = v3(0,1,-10) }
+  return self
+end
+
+function update_chase_cam( self )
+  local target = self.target
+  local cam_fd = v3( target.rt.r[3][1], 0, target.rt.r[3][3])
+  v3_normalize( cam_fd )
+  local cam_up = v3(0,1,0)
+  local cam_rt = v3_cross( cam_up, cam_fd )
+  local cam_m = {cam_rt,cam_up,cam_fd}
+  self.rt = { r=cam_m, t = v3_add( target.rt.t, v3_mul_m3(v3( 0, 1, -3), cam_m ) ) }
+end
+
+function spawn_player_ship()
+  sh = { update = ship_update, add_scene = ship_add_scene }
   sh.rt = {}
   sh.rt.r = m3_id()
   sh.rt.t = v3(0,1,0)
@@ -818,6 +868,7 @@ function ship_init( sh )
   --sh.fd = v3(0,0,1)
   sh.vel = v3(0,0,0)
   --sh.sp = 10.0
+  return sh
 end
 
 function ship_update( sh )
@@ -865,6 +916,18 @@ function ship_add_scene( sh )
   scene_add_obj( obj_ship, sh.rt )
 end
 
+cam_to_world = {}
+cam_odometer = 0
+
+game = {
+ t = 0,
+ spin = v3(0,0,0),
+ paused = true,
+ flycam = false,
+
+ ents = {}
+}
+
 function _init()
  perf_counter( "bg" )
  perf_counter( "draw" )
@@ -884,68 +947,38 @@ function _init()
  obj_ship = obj_make_ship()
  init_dither()
 
- ship_init( player_ship )
+ player_ship = spawn_player_ship(  )
+ add(game.ents,player_ship)
+ fly_cam = spawn_fly_cam()
+ chase_cam = spawn_chase_cam()
+ add(game.ents,chase_cam)
+ chase_cam.target = player_ship
+
+ cam_to_world = { r=m3_id(), t= v3(0,0,0) }
 end
 
-cam_pos = v3(0,1,-10)
-cam_angles = v3(0,0,0)
-cam_to_world = {}
-cam_odometer = 0
-
-game = {
- t = 0,
- spin = v3(0,0,0),
- paused = true
-}
 
 function update()
  perf_begin("update")
  sys_time_tick()
 
+ local prev_cam_pos = { cam_to_world.t[1], cam_to_world.t[2], cam_to_world.t[3] }
 
-
-
- local fly_cam = false
-
- local prev_cam_pos = { cam_pos[1], cam_pos[2], cam_pos[3] }
-
- if fly_cam then
-   cam_move = v3(0,0,0)
-   
-   if (btn(4)) then
-    if ( btn(0) )cam_move[1]-=.1
-    if ( btn(1) )cam_move[1]+=.1
-
-    if ( btn(2) )cam_move[3]+=.1
-    if ( btn(3) )cam_move[3]-=.1
-   else
-    if ( btn(0) )cam_angles[2]+=.01
-    if ( btn(1) )cam_angles[2]-=.01
-
-    if ( btn(2) )cam_angles[1]-=.01
-    if ( btn(3) )cam_angles[1]+=.01
-   end
-
-   cam_m = m3_mul( m3_rot_x(cam_angles[1]), m3_rot_y(cam_angles[2]) )
-
-   cam_pos = v3_add( cam_pos, v3_mul_m3(cam_move, cam_m) )
-
-   cam_to_world = { r=cam_m, t= cam_pos }
- else
-    cam_m = m3_id() --player_ship.rt.r
-    cam_fd = v3( player_ship.rt.r[3][1], 0, player_ship.rt.r[3][3])
-    v3_normalize( cam_fd )
-    cam_up = v3(0,1,0)
-    cam_rt = v3_cross( cam_up, cam_fd )
-     cam_to_world = { r={cam_rt,cam_up,cam_fd} }
-    cam_pos = v3_add( player_ship.rt.t, v3_mul_m3(v3( 0, 1, -3), cam_to_world.r ) )
-    cam_to_world.t = cam_pos
- end
+ fly_cam.update( fly_cam )
 
  if not game.paused then 
   game.t += sys_time.dt
-  player_ship.update( player_ship )
+  for e in all(game.ents) do
+    e.update(e)
+  end
  end
+
+ if game.flycam then
+   cam_to_world = fly_cam.rt
+ else
+   cam_to_world = chase_cam.rt
+ end
+
 
  -- todo, use delta projected onto world xz
  local delta_cam = v3_sub( cam_to_world.t, prev_cam_pos )
@@ -955,6 +988,10 @@ function update()
 
  if (btnp(0,1)) then
   game.paused = not game.paused
+ end
+
+ if (btnp(1,1)) then
+  game.flycam = not game.flycam
  end
 
 
