@@ -585,7 +585,7 @@ end
 
 
 function dl_tri(v)
-   fillp(v.fp)
+   --fillp(v.fp)
    trifill( v.ax,v.ay,v.bx,v.by,v.cx,v.cy, v.col )
 end
 
@@ -774,13 +774,13 @@ function gfx_dither_calc( grad, s )
 
    local c1 = grad[g_i1]
    local c2 = grad[g_i2]
-   local col = c1 + c2 * 16 
+   local col = flr(c1) + flr(c2) * 16 
 
    local dc = #dither_patterns
    local di = flr( g_f * (dc-1) )
    local fp = dither_patterns[ mid( 1 + di, 1, dc ) ]
 
-   return {c = col, f = fp }
+   return 0x1000 + col + rotr(fp,16)
 end
 
 gradients = { 
@@ -831,6 +831,8 @@ function _init()
  perf_counter( "drawlist" )
  
  perf_reset()
+
+ poke(0x5F34, 1) -- sets integrated fillpattern + colour mode
 
 	obj_cube = obj_make_cube()
  obj_torus = obj_make_torus(0.75,0.5, 10, 6)
@@ -1112,7 +1114,7 @@ function obj_draw( obj, obj_to_world, shadow )
      local fg = 1.0 - (avgz / (10+avgz))
      local sh = mid( fg * (v3_dot(obj_ldir, t[5]) * -63 + 64), 1, 127)
      local d = dither_tables[t[4]][flr( sh )]
-     add( drawlist, { key=-avgz, fn = dl_tri, ax=ax,ay=ay, bx=bx, by=by, cx=cx, cy=cy, col=d.c, fp=d.f } )
+     add( drawlist, { key=-avgz, fn = dl_tri, ax=ax,ay=ay, bx=bx, by=by, cx=cx, cy=cy, col=d } )
    end
    end
   end
@@ -1300,8 +1302,7 @@ function vgrad(y0, y1, i0, i1, g)
  local ds_dy = (i1 - i0) / (y1 - y0)
  for y=y0,y1 do
   local d = gfx_dither( g, s )
-  fillp(d.f)
-  rect(0,y, 127,y, d.c)
+  rect(0,y, 127,y, d)
 
   s += ds_dy
  end
@@ -1363,9 +1364,7 @@ function draw_floor()
    s = mid( d_y, 0, 1 )
   end
   local di = gfx_dither( c, s * sh )
-  fillp(di.f)
-
-  rectfill(0,y,127,y,di.c)
+  rectfill(0,y,127,y,di)
   
   d_y += d_y_dy
   d_xz += d_xz_dy
