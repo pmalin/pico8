@@ -1334,7 +1334,7 @@ function draw_floor()
   local c,s
   if t > 0 and t < 10000 then  
    c = 5
-   s = t / (10+t) 
+   s = t*d_xz / (10+t*d_xz) 
    if (flr(d_xz * t + cam_odometer)%10<5) s *= .5
    -- local xz = d_xz * t
    --s = (1 - mid( 1 / xz, 0, 1)) * .2
