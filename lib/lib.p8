@@ -803,6 +803,25 @@ obj_torus = {}
 obj_ship = {}
 sys_time = { t=0, dt=1/60, b=60 }
 
+player_ship = {}
+
+function ship_init( sh )
+  sh.init = ship_init
+  sh.update = ship_update
+  sh.add_scene = ship_add_scene
+  sh.rt = {}
+  sh.rt.r = m3_id()
+  sh.rt.t = v3(0,1,0)
+  sh.fd = v3(0,0,1)
+end
+
+function ship_update( sh )
+end
+
+function ship_add_scene( sh )
+  scene_add_obj( obj_ship, sh.rt )
+end
+
 function _init()
  perf_counter( "bg" )
  perf_counter( "draw" )
@@ -821,6 +840,8 @@ function _init()
  obj_torus = obj_make_torus(0.75,0.5, 10, 6)
  obj_ship = obj_make_ship()
  init_dither()
+
+ ship_init( player_ship )
 end
 
 cam_pos = v3(0,1,-10)
@@ -874,6 +895,8 @@ function update()
 
  game.spin[1] = game.t * 0.234
  game.spin[2] = game.t * 1
+
+ player_ship.update( player_ship )
 
  perf_end("update")
 end
@@ -1019,13 +1042,13 @@ function obj_make_ship()
   {.4, .1, -.8},
   {-.4, .1, -.8},
 
-  {-1, 0, -.9},
-  {-.9, .2, -.6},
-  {-.9, 0, .5},
+  {-1, .1, -.7},
+  {-.8, .2, -.9},
+  {-.8, 0, .5},
 
-  { 1, 0, -.9},
-  { .9, .2, -.6},
-  { .9, 0, .5},
+  { 1, .1, -.7},
+  { .8, .2, -.9},
+  { .8, 0, .5},
 
   {-.18, 0, 1.1},
   {.18, 0, 1.1},
@@ -1343,6 +1366,8 @@ function scene_build()
    --for z=3,-3,-1 do
     --scene_add_sprite( v3(4,0.5,z * 4), spr_def )
    --end
+
+   player_ship.add_scene( player_ship )
 
    --scene_add_obj( obj_cube, obj_to_world )
    --scene_add_obj( obj_torus, obj_to_world )
