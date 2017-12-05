@@ -812,12 +812,21 @@ function ship_init( sh )
   sh.rt = {}
   sh.rt.r = m3_id()
   sh.rt.t = v3(0,1,0)
-  sh.fd = v3(0,0,1)
+
+  --sh.angles = {0,0,0}
+  sh.angvel = {0,0,0}
+  --sh.fd = v3(0,0,1)
   sh.sp = 1.0
 end
 
 function ship_update( sh )
-  sh.rt.t = v3_add(sh.rt.t, v3_mul_s(sh.fd, sh.sp * sys_time.dt))
+
+  -- sh.rt.r = m3_mul( m3_rot_x(sh.angles[1]), m3_rot_y(sh.angles[2]) )
+
+  sh.rt.r = m3_mul( sh.rt.r, m3_rot_z(0.01) )
+
+  -- move 
+  sh.rt.t = v3_add(sh.rt.t, v3_mul_s(sh.rt.r[3], sh.sp * sys_time.dt))
 end
 
 function ship_add_scene( sh )
@@ -862,34 +871,46 @@ function update()
  sys_time_tick()
 
 
- cam_move = v3(0,0,0)
- if (btn(4)) then
-  if ( btn(0) )cam_move[1]-=.1
-  if ( btn(1) )cam_move[1]+=.1
-
-  if ( btn(2) )cam_move[3]+=.1
-  if ( btn(3) )cam_move[3]-=.1
- else
-  if ( btn(0) )cam_angles[2]+=.01
-  if ( btn(1) )cam_angles[2]-=.01
-
-  if ( btn(2) )cam_angles[1]-=.01
-  if ( btn(3) )cam_angles[1]+=.01
- end
-
- cam_m = m3_mul( m3_rot_x(cam_angles[1]), m3_rot_y(cam_angles[2]) )
-
- cam_pos = v3_add( cam_pos, v3_mul_m3(cam_move, cam_m) )
-
- cam_to_world = { r=cam_m, t= cam_pos }
-
- -- todo, use delta projected onto world xz
- cam_odometer += cam_move[3]
 
  if not game.paused then 
   game.t += sys_time.dt
   player_ship.update( player_ship )
  end
+
+ local fly_cam = true
+
+ --local prev_cam_pos = { cam_to_world.t[1], cam_to_world.t[2], cam_to_world.t[3] }
+ local prev_cam_pos = { cam_pos[1], cam_pos[2], cam_pos[3] }
+
+ if fly_cam then
+   cam_move = v3(0,0,0)
+   
+   if (btn(4)) then
+    if ( btn(0) )cam_move[1]-=.1
+    if ( btn(1) )cam_move[1]+=.1
+
+    if ( btn(2) )cam_move[3]+=.1
+    if ( btn(3) )cam_move[3]-=.1
+   else
+    if ( btn(0) )cam_angles[2]+=.01
+    if ( btn(1) )cam_angles[2]-=.01
+
+    if ( btn(2) )cam_angles[1]-=.01
+    if ( btn(3) )cam_angles[1]+=.01
+   end
+
+   cam_m = m3_mul( m3_rot_x(cam_angles[1]), m3_rot_y(cam_angles[2]) )
+
+   cam_pos = v3_add( cam_pos, v3_mul_m3(cam_move, cam_m) )
+
+   cam_to_world = { r=cam_m, t= cam_pos }
+ end
+
+ -- todo, use delta projected onto world xz
+ local delta_cam = v3_sub( cam_to_world.t, prev_cam_pos )
+ delta_cam[2] = 0
+ cam_odometer += v3_dot( m3_get_az(cam_to_world.r), delta_cam )
+
 
  if (btnp(0,1)) then
   game.paused = not game.paused
