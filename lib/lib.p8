@@ -813,9 +813,11 @@ function ship_init( sh )
   sh.rt.r = m3_id()
   sh.rt.t = v3(0,1,0)
   sh.fd = v3(0,0,1)
+  sh.sp = 1.0
 end
 
 function ship_update( sh )
+  sh.rt.t = v3_add(sh.rt.t, v3_mul_s(sh.fd, sh.sp * sys_time.dt))
 end
 
 function ship_add_scene( sh )
@@ -886,6 +888,7 @@ function update()
 
  if not game.paused then 
   game.t += sys_time.dt
+  player_ship.update( player_ship )
  end
 
  if (btnp(0,1)) then
@@ -896,7 +899,6 @@ function update()
  game.spin[1] = game.t * 0.234
  game.spin[2] = game.t * 1
 
- player_ship.update( player_ship )
 
  perf_end("update")
 end
