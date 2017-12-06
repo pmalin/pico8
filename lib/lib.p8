@@ -815,7 +815,7 @@ function spawn_fly_cam()
 end
 
 function fly_cam_update( self )
-  if not game.flycam then
+  if game.camera_mode != 1 then
     return
   end
   local cam_move = v3(0,0,0)
@@ -923,7 +923,7 @@ game = {
  t = 0,
  spin = v3(0,0,0),
  paused = true,
- flycam = false,
+ camera_mode = 0,
 
  ents = {}
 }
@@ -973,10 +973,10 @@ function update()
   end
  end
 
- if game.flycam then
-   cam_to_world = fly_cam.rt
- else
+ if game.camera_mode == 0 then
    cam_to_world = chase_cam.rt
+ else
+   cam_to_world = fly_cam.rt
  end
 
 
@@ -991,7 +991,7 @@ function update()
  end
 
  if (btnp(1,1)) then
-  game.flycam = not game.flycam
+  game.camera_mode = (game.camera_mode + 1) % 3
  end
 
 
